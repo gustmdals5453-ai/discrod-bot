@@ -1,20 +1,8 @@
 // ================== discord.js ==================
-const {
-  Client,
-  GatewayIntentBits,
-  EmbedBuilder,
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
-  PermissionsBitField
-} = require("discord.js");
+const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionsBitField } = require("discord.js");
 
 const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent
-  ]
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
 });
 
 const prefix = "!";
@@ -25,74 +13,66 @@ let game = {};
 let tickets = {};
 
 const symbols = ["🍒","🍋","🍊","🍇","💎","7️⃣"];
-const getRandomSymbol = () => symbols[Math.floor(Math.random() * symbols.length)];
+const getRandomSymbol = () => symbols[Math.floor(Math.random()*symbols.length)];
 
 const choices = ["가위","바위","보"];
 const emojis = { 가위:"✌️", 바위:"✊", 보:"✋" };
 
 const format = (n) => n.toLocaleString();
 
-client.on("ready", () => console.log(`✅ 로그인됨: ${client.user.tag}`));
+client.on("ready", ()=>console.log(`✅ 로그인됨: ${client.user.tag}`));
 
-client.on("messageCreate", async (message) => {
-  if (message.author.bot || !message.content.startsWith(prefix)) return;
+client.on("messageCreate", async (message)=>{
+  if(message.author.bot || !message.content.startsWith(prefix)) return;
   const args = message.content.slice(prefix.length).trim().split(/ +/);
   const cmd = args[0].toLowerCase();
   const id = message.author.id;
-  if (!data[id]) data[id] = { money: 0 };
+  if(!data[id]) data[id]={money:0};
 
   // 슬롯/가위바위보 중복 방지
-  if (["슬롯","가위바위보"].includes(cmd) && game[id]) {
-    return message.reply({ content:"❌ 이미 게임 중입니다", ephemeral:true });
-  }
+  if(["슬롯","가위바위보"].includes(cmd) && game[id]) return message.reply({ content:"❌ 이미 게임 중입니다", ephemeral:true });
 
   // 💳 잔액
-  if (cmd === "잔액") return message.reply({
-    embeds:[new EmbedBuilder().setColor(0x00E5FF).setTitle("💳 내 잔액").setDescription(`💰 ${format(data[id].money)}원`)]
-  });
+  if(cmd==="잔액") return message.reply({ embeds:[new EmbedBuilder().setColor(0x00E5FF).setTitle("💳 내 잔액").setDescription(`💰 ${format(data[id].money)}원`)] });
 
   // 💰 돈줘
-  if (cmd === "돈줘") {
+  if(cmd==="돈줘"){
     const now = Date.now();
-    const last = data[id].lastDaily || 0;
-    if (now - last < 86400000) return message.reply({
-      embeds:[new EmbedBuilder().setColor(0xFF5252).setTitle("⏳ 아직 지급 불가").setDescription("하루 1회만 가능")]
-    });
+    const last = data[id].lastDaily||0;
+    if(now-last<86400000) return message.reply({ embeds:[new EmbedBuilder().setColor(0xFF5252).setTitle("⏳ 아직 지급 불가").setDescription("하루 1회만 가능")] });
     data[id].lastDaily = now;
     data[id].money += 10000;
-    return message.reply({
-      embeds:[new EmbedBuilder().setColor(0x00E676).setTitle("💰 일일 보상").setDescription(`+10,000원\n💳 ${format(data[id].money)}원`)]
-    });
+    return message.reply({ embeds:[new EmbedBuilder().setColor(0x00E676).setTitle("💰 일일 보상").setDescription(`+10,000원\n💳 ${format(data[id].money)}원`)] });
   }
 
   // 💸 송금
-  if (cmd === "송금") {
+  if(cmd==="송금"){
     const target = message.mentions.users.first();
     const amount = parseInt(args.find(a=>!isNaN(a)));
-    if (!target) return message.reply("❌ 유저 멘션 필요");
-    if (!amount || amount<=0) return message.reply("❌ 금액 입력");
-    if (target.id===id) return message.reply("❌ 자기 자신 불가");
-    if (data[id].money<amount) return message.reply("💸 돈 부족");
-    if (!data[target.id]) data[target.id]={money:0};
+    if(!target) return message.reply("❌ 유저 멘션 필요");
+    if(!amount || amount<=0) return message.reply("❌ 금액 입력");
+    if(target.id===id) return message.reply("❌ 자기 자신 불가");
+    if(data[id].money<amount) return message.reply("💸 돈 부족");
+    if(!data[target.id]) data[target.id]={money:0};
     data[id].money-=amount;
     data[target.id].money+=amount;
     return message.reply({ embeds:[new EmbedBuilder().setColor(0x00B0FF).setTitle("💸 송금 완료").setDescription(`<@${id}> ➜ <@${target.id}>\n💰 ${format(amount)}원\n💳 ${format(data[id].money)}원`)] });
   }
 
   // 🎰 슬롯
-  if (cmd === "슬롯") {
+  if(cmd==="슬롯"){
     const bet = parseInt(args[1]);
-    if (isNaN(bet)) return message.reply("❌ 금액 입력");
-    if (data[id].money < bet) return message.reply("💸 돈 부족");
-    game[id] = "slot";
+    if(isNaN(bet)) return message.reply("❌ 금액 입력");
+    if(data[id].money<bet) return message.reply("💸 돈 부족");
 
+    game[id]="slot";
     let msg = await message.reply({ embeds:[new EmbedBuilder().setColor(0x6C5CE7).setTitle("🎰 슬롯").setDescription("🎲 스핀 중...")] });
 
-    // 자연스러운 애니메이션
+    // 애니메이션 loop
     for(let i=0;i<8;i++){
       const s1=getRandomSymbol(), s2=getRandomSymbol(), s3=getRandomSymbol();
       await msg.edit({ embeds:[new EmbedBuilder().setColor(0x6C5CE7).setTitle("🎰 슬롯").setDescription(`${s1} │ ${s2} │ ${s3}\n🎲 스핀 중...`)] });
-      await new Promise(r=>setTimeout(r, i<5?150:300));
+      await new Promise(r=>setTimeout(r,i<5?150:300));
     }
 
     const [f1,f2,f3] = [getRandomSymbol(),getRandomSymbol(),getRandomSymbol()];
@@ -115,13 +95,11 @@ client.on("messageCreate", async (message) => {
     if(data[id].money<bet) return message.reply("💸 돈 부족");
 
     game[id]=bet;
-
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder().setCustomId("rps_가위").setEmoji("✌️").setStyle(ButtonStyle.Primary),
       new ButtonBuilder().setCustomId("rps_바위").setEmoji("✊").setStyle(ButtonStyle.Primary),
       new ButtonBuilder().setCustomId("rps_보").setEmoji("✋").setStyle(ButtonStyle.Primary)
     );
-
     return message.reply({ embeds:[new EmbedBuilder().setColor(0x7C4DFF).setTitle("🎮 가위바위보").setDescription(`💸 ${format(bet)}원 배팅\n👇 버튼 선택`)], components:[row] });
   }
 
@@ -143,11 +121,12 @@ client.on("interactionCreate", async (i)=>{
   // 🎮 가위바위보
   if(i.customId.startsWith("rps_")){
     if(!game[id]) return i.reply({ content:"❌ 게임 없음", ephemeral:true });
+
     const user = i.customId.split("_")[1];
     const bot = choices[Math.floor(Math.random()*3)];
     const bet = game[id];
-
     let change=0,result="무승부";
+
     if((user==="가위"&&bot==="보")||(user==="바위"&&bot==="가위")||(user==="보"&&bot==="바위")) change=bet,result="승리 🎉";
     else if(user!==bot) change=-bet,result="패배 💀";
 
