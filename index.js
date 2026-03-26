@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionsBitField } = require("discord.js");
+const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionsBitField, ChannelType } = require("discord.js");
 const mongoose = require("mongoose");
 
 const client = new Client({
@@ -39,6 +39,7 @@ async function getUser(id) {
 
 // ================== 변수 ==================
 let game = {};
+let tickets = {};
 
 const symbols = ["🍒","🍋","🍊","🍇","💎","7️⃣"];
 const rand = arr => arr[Math.floor(Math.random() * arr.length)];
@@ -106,7 +107,6 @@ client.on("messageCreate", async m => {
 
     if(isNaN(bet)) return m.reply({ embeds:[E("❌ 오류","금액 입력",0xFF4D4D)] });
     if(user.money < bet) return m.reply({ embeds:[E("💸 실패","돈 부족",0xFF4D4D)] });
-
     if(game[id]) return m.reply({ embeds:[E("❌","이미 게임 중",0xFF4D4D)] });
 
     game[id] = true;
@@ -160,19 +160,39 @@ client.on("messageCreate", async m => {
     return m.reply({ embeds:[E("🏆 TOP 10", desc, 0xFFD700)] });
   }
 
-  // ================== 문의 ==================
+  // ================== 문의 (티켓 시스템) ==================
   if(cmd==="문의"){
     const text = args.slice(1).join(" ");
     if(!text) return m.reply({ embeds:[E("❌ 오류","내용 입력",0xFF4D4D)] });
 
-    const owner = await client.users.fetch(process.env.OWNER_ID);
+    if(tickets[id])
+      return m.reply({ embeds:[E("❌ 이미 있음","이미 열린 문의 있음",0xFF4D4D)] });
 
-    owner.send({
-      embeds:[E("📩 문의",
-        `👤 ${m.author.tag}\n📝 ${text}`,0x00E5FF)]
+    const channel = await m.guild.channels.create({
+      name: `문의-${m.author.username}`,
+      type: ChannelType.GuildText,
+      permissionOverwrites: [
+        { id: m.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
+        { id: m.author.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }
+      ]
     });
 
-    return m.reply({ embeds:[E("✅ 완료","관리자에게 전달됨",0x00FF88)] });
+    tickets[id] = channel.id;
+
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId("close_ticket")
+        .setLabel("🔒 문의 닫기")
+        .setStyle(ButtonStyle.Danger)
+    );
+
+    await channel.send({
+      content: `<@${id}>`,
+      embeds:[E("📩 문의 접수", `내용:\n${text}`)],
+      components:[row]
+    });
+
+    return m.reply({ embeds:[E("✅ 문의 생성", `${channel} 생성됨`,0x00FF88)] });
   }
 
   // ================== 경고 ==================
@@ -189,10 +209,7 @@ client.on("messageCreate", async m => {
     t.warns++;
     await t.save();
 
-    return m.reply({
-      embeds:[E("⚠️ 경고",
-        `${target}\n사유: ${reason}\n누적: **${t.warns}회**`,0xFFA500)]
-    });
+    return m.reply({ embeds:[E("⚠️ 경고", `${target}\n사유: ${reason}\n누적: **${t.warns}회**`,0xFFA500)] });
   }
 
   // ================== 경고확인 ==================
@@ -200,10 +217,7 @@ client.on("messageCreate", async m => {
     const target = m.mentions.users.first() || m.author;
     const t = await getUser(target.id);
 
-    return m.reply({
-      embeds:[E("📊 경고 현황",
-        `${target} → **${t.warns}회**`,0x00E5FF)]
-    });
+    return m.reply({ embeds:[E("📊 경고 현황", `${target} → **${t.warns}회**`,0x00E5FF)] });
   }
 
   // ================== 경고해제 ==================
@@ -218,10 +232,7 @@ client.on("messageCreate", async m => {
     t.warns = 0;
     await t.save();
 
-    return m.reply({
-      embeds:[E("✅ 초기화",
-        `${target} 경고 초기화`,0x00FF88)]
-    });
+    return m.reply({ embeds:[E("✅ 초기화", `${target} 경고 초기화`,0x00FF88)] });
   }
 });
 
@@ -229,6 +240,21 @@ client.on("messageCreate", async m => {
 client.on("interactionCreate", async i=>{
   if(!i.isButton()) return;
 
+  // 티켓 닫기
+  if(i.customId === "close_ticket"){
+    if(!i.member.permissions.has(PermissionsBitField.Flags.Administrator))
+      return i.reply({ content:"❌ 관리자만 가능", ephemeral:true });
+
+    await i.reply({ content:"⏳ 삭제 중...", ephemeral:true });
+
+    setTimeout(()=>{
+      i.channel.delete().catch(()=>{});
+    }, 2000);
+
+    return;
+  }
+
+  // 가위바위보
   const id = i.user.id;
   const user = await getUser(id);
 
