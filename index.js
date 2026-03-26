@@ -145,9 +145,11 @@ client.on("messageCreate", async message => {
     return message.reply({ embeds:[embed], components:[row] });
   }
 
-  // ⚠️ 경고 시스템 (관리자 전용)
+  // ================== 경고 시스템 ==================
+  // ⚠️ 경고 부여
   if(cmd==="경고"){
-    if(!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) return message.reply("❌ 관리자만 가능");
+    if(!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) 
+        return message.reply("❌ 관리자만 가능");
     const target = message.mentions.users.first();
     const reason = args.slice(2).join(" ") || "사유 없음";
     if(!target) return message.reply("❌ 유저 멘션 필요");
@@ -160,10 +162,13 @@ client.on("messageCreate", async message => {
     return message.reply({ embeds:[embed] });
   }
 
+  // ✅ 경고 해제
   if(cmd==="경고해제"){
-    if(!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) return message.reply("❌ 관리자만 가능");
+    if(!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) 
+        return message.reply("❌ 관리자만 가능");
     const target = message.mentions.users.first();
-    if(!target || !warns[target.id] || warns[target.id].length===0) return message.reply("❌ 경고 내역 없음");
+    if(!target || !warns[target.id] || warns[target.id].length===0) 
+        return message.reply("❌ 경고 내역 없음");
     warns[target.id].pop();
     const embed = new EmbedBuilder()
       .setColor(0x00E676)
@@ -172,6 +177,7 @@ client.on("messageCreate", async message => {
     return message.reply({ embeds:[embed] });
   }
 
+  // 📄 경고 확인
   if(cmd==="경고확인"){
     const target = message.mentions.users.first() || message.author;
     const list = warns[target.id] || [];
