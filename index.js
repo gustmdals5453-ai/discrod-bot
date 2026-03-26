@@ -17,7 +17,7 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildMembers // 🔥 통계용 추가
+    GatewayIntentBits.GuildMembers
   ]
 });
 
@@ -28,11 +28,11 @@ mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB 연결됨"))
   .catch(console.log);
 
-// ================== 💎 한국협회 보고서 Embed ==================
+// ================== 💎 한국협회 Embed ==================
 const E = (title) =>
   new EmbedBuilder()
     .setColor(0x111827)
-    .setAuthor({ name: "📊 한국협회 데이터 센터" })
+    .setAuthor({ name: "한국협회 데이터 센터" })
     .setTitle(`┏━━━ ${title} ━━━┓`)
     .setFooter({ text: "한국협회 • 내부 보고 시스템" })
     .setTimestamp();
@@ -76,10 +76,6 @@ let tickets = {};
 
 const symbols = ["🍒","🍋","🍊","🍇","💎","7️⃣"];
 const rand = arr => arr[Math.floor(Math.random() * arr.length)];
-
-const choices = ["가위","바위","보"];
-const emojis = { 가위:"✌️", 바위:"✊", 보:"✋" };
-
 const f = n => n.toLocaleString();
 
 // ================== READY ==================
@@ -109,7 +105,7 @@ client.on("messageCreate", async m => {
   const user = await getUser(id);
   const stats = await getStats(m.guild.id);
 
-  // 🔥 활동 기록
+  // 활동 기록
   user.messages++;
   await user.save();
 
@@ -138,7 +134,7 @@ client.on("messageCreate", async m => {
   if(cmd==="돈줘"){
     const now = Date.now();
     if(now - user.lastDaily < 86400000)
-      return m.reply({ embeds:[E("접근 제한").setDescription("하루 1회만 가능")] });
+      return m.reply({ embeds:[E("제한").setDescription("하루 1회만 가능")] });
 
     user.lastDaily = now;
     user.money += 10000;
@@ -159,10 +155,16 @@ client.on("messageCreate", async m => {
     const target = m.mentions.users.first();
     const amount = parseInt(args[1]);
 
-    if(!target || !amount) return;
+    if(!target)
+      return m.reply({ embeds:[E("오류").setDescription("유저 멘션 필요")] });
+
+    if(!amount || amount <= 0)
+      return m.reply({ embeds:[E("오류").setDescription("금액 입력 필요")] });
+
+    if(user.money < amount)
+      return m.reply({ embeds:[E("실패").setDescription("잔액 부족")] });
 
     const receiver = await getUser(target.id);
-    if(user.money < amount) return;
 
     user.money -= amount;
     receiver.money += amount;
@@ -181,12 +183,13 @@ client.on("messageCreate", async m => {
     });
   }
 
-  // 🎰 슬롯 (애니메이션 유지)
+  // 🎰 슬롯 (애니메이션)
   if(cmd==="슬롯"){
     const bet = parseInt(args[1]);
 
-    if(isNaN(bet) || user.money < bet) return;
-    if(game[id]) return;
+    if(isNaN(bet)) return m.reply({ embeds:[E("오류").setDescription("금액 입력")] });
+    if(user.money < bet) return m.reply({ embeds:[E("실패").setDescription("잔액 부족")] });
+    if(game[id]) return m.reply({ embeds:[E("오류").setDescription("이미 진행 중")] });
 
     game[id] = true;
 
@@ -198,9 +201,7 @@ client.on("messageCreate", async m => {
       const r3 = rand(symbols);
 
       await msg.edit({
-        embeds:[E("슬롯 머신")
-          .setDescription(`\`${r1} | ${r2} | ${r3}\`\n\n회전 중...`)
-        ]
+        embeds:[E("슬롯 머신").setDescription(`\`${r1} | ${r2} | ${r3}\`\n\n회전 중...`)]
       });
 
       await new Promise(r => setTimeout(r, 300));
@@ -227,80 +228,83 @@ client.on("messageCreate", async m => {
     });
   }
 
-  // 🏆 돈 랭킹
-  if(cmd==="랭킹"){
-    const top = await User.find().sort({ money:-1 }).limit(10);
+  // 📩 문의
+  if(cmd==="문의"){
+    const text = args.slice(1).join(" ");
+    if(!text) return m.reply({ embeds:[E("오류").setDescription("내용 입력")] });
+    if(tickets[id]) return m.reply({ embeds:[E("오류").setDescription("이미 문의 있음")] });
 
-    return m.reply({
-      embeds:[E("자산 순위 보고서")
-        .addFields(top.map((u,i)=>({
-          name:`${i+1}위`,
-          value:`<@${u.userId}> • ${f(u.money)}원`
-        })))
+    const channel = await m.guild.channels.create({
+      name:`문의-${m.author.username}`,
+      type: ChannelType.GuildText,
+      permissionOverwrites:[
+        { id:m.guild.id, deny:[PermissionsBitField.Flags.ViewChannel] },
+        { id:m.author.id, allow:[PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }
       ]
     });
+
+    tickets[id] = channel.id;
+
+    return m.reply({ embeds:[E("문의 생성").setDescription(`${channel} 생성됨`)] });
   }
 
-  // 🔥 활동 랭킹
-  if(cmd==="활동랭킹"){
-    const top = await User.find().sort({ messages:-1 }).limit(10);
+  // ================== ⚠️ 경고 시스템 ==================
+
+  if(cmd==="경고"){
+    if(!m.member.permissions.has(PermissionsBitField.Flags.Administrator))
+      return m.reply({ embeds:[E("권한 없음").setDescription("관리자만 가능")] });
+
+    const target = m.mentions.users.first();
+    const reason = args.slice(2).join(" ");
+
+    if(!target) return m.reply({ embeds:[E("오류").setDescription("유저 멘션")] });
+    if(!reason) return m.reply({ embeds:[E("오류").setDescription("사유 입력 필수")] });
+
+    const t = await getUser(target.id);
+    t.warns++;
+    await t.save();
 
     return m.reply({
-      embeds:[E("활동 분석 보고서")
-        .addFields(top.map((u,i)=>({
-          name:`${i+1}위`,
-          value:`<@${u.userId}> • ${u.messages}회`
-        })))
-      ]
-    });
-  }
-
-  // 📊 통계
-  if(cmd==="통계"){
-    const peakHour = Object.entries(stats.hourly).sort((a,b)=>b[1]-a[1])[0];
-    const peakDay = Object.entries(stats.daily).sort((a,b)=>b[1]-a[1])[0];
-    const days = ["일","월","화","수","목","금","토"];
-
-    return m.reply({
-      embeds:[E("서버 종합 분석")
+      embeds:[E("경고 부여")
         .addFields(
-          { name:"총 메시지", value:`${stats.totalMessages}`, inline:true },
-          { name:"가입/탈퇴", value:`${stats.joins}/${stats.leaves}`, inline:true },
-          { name:"활동 시간", value: peakHour?`${peakHour[0]}시`:"없음", inline:true },
-          { name:"활동 요일", value: peakDay?`${days[peakDay[0]]}요일`:"없음", inline:true }
+          { name:"대상", value:`${target}`, inline:true },
+          { name:"사유", value:reason },
+          { name:"누적 경고", value:`${t.warns}회`, inline:true }
         )
       ]
     });
   }
 
-  // 📩 문의 (유지)
-  if(cmd==="문의"){
-    const text = args.slice(1).join(" ");
-    if(!text) return;
+  if(cmd==="경고확인"){
+    const target = m.mentions.users.first() || m.author;
+    const t = await getUser(target.id);
 
-    if(tickets[id]) return;
-
-    const channel = await m.guild.channels.create({
-      name:`문의-${m.author.username}`,
-      type: ChannelType.GuildText
+    return m.reply({
+      embeds:[E("경고 조회")
+        .addFields(
+          { name:"대상", value:`${target}`, inline:true },
+          { name:"경고 수", value:`${t.warns}회`, inline:true }
+        )
+      ]
     });
+  }
 
-    tickets[id] = channel.id;
+  if(cmd==="경고해제"){
+    if(!m.member.permissions.has(PermissionsBitField.Flags.Administrator))
+      return m.reply({ embeds:[E("권한 없음").setDescription("관리자만 가능")] });
 
-    const row = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId("close_ticket")
-        .setLabel("닫기")
-        .setStyle(ButtonStyle.Danger)
-    );
+    const target = m.mentions.users.first();
+    if(!target) return m.reply({ embeds:[E("오류").setDescription("유저 멘션")] });
 
-    await channel.send({
-      content:`<@${id}>`,
-      embeds:[E("문의 접수").setDescription(text)],
-      components:[row]
+    const t = await getUser(target.id);
+    t.warns = 0;
+    await t.save();
+
+    return m.reply({
+      embeds:[E("경고 초기화")
+        .setDescription(`${target} 경고가 초기화됨`)
+      ]
     });
-
-    return m.reply({ embeds:[E("문의 생성 완료")] });
   }
 
 });
