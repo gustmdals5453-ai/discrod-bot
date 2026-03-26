@@ -85,31 +85,24 @@ client.on("messageCreate", async m=>{
 
   const user = await getUser(id);
 
-  // 📖 도움말
+  // 📖 도움말 (여기만 수정됨)
   if(cmd==="도움말"){
     return m.reply({
-      embeds:[E("명령어 안내")
-        .setDescription(`
-## 경제
-**!잔액 / !돈줘 / !송금 @유저 금액**
-
-## 카지노
-**!슬롯 금액
-!블랙잭 금액
-!바카라 금액
-!가위바위보 금액**
-
-## 랭킹
-!랭킹
-
-## 경고
-**!경고 @유저 사유
-!경고확인
-!경고초기화 @유저**
-
-## 문의
-**!문의 내용**
-`)]
+      embeds:[
+        new EmbedBuilder()
+          .setColor(0x00FF88)
+          .setAuthor({ name: "한국협회" })
+          .setTitle("┏━━━ 시스템 안내 ━━━┓")
+          .addFields(
+            { name: "경제", value: "```!잔액 / !돈줘 / !송금 @유저 금액```" },
+            { name: "카지노", value: "```!슬롯 금액\n!블랙잭 금액\n!바카라 금액\n!가위바위보 금액```" },
+            { name: "랭킹", value: "```!랭킹```" },
+            { name: "경고", value: "```!경고 @유저 사유\n!경고확인\n!경고초기화 @유저```" },
+            { name: "문의", value: "```!문의 내용```" }
+          )
+          .setFooter({ text: "한국협회 • 시스템" })
+          .setTimestamp()
+      ]
     });
   }
 
@@ -326,7 +319,7 @@ client.on("interactionCreate", async i=>{
   if(i.customId.startsWith("blackjack_")){
     const bet = parseInt(i.customId.split("_")[1]);
 
-    await i.update({ embeds:[C("블랙잭").setDescription("카드 توزيع 중...")], components:[] });
+    await i.update({ embeds:[C("블랙잭").setDescription("카드 뽑는 중...")], components:[] });
 
     await new Promise(r=>setTimeout(r,1200));
 
