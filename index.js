@@ -1,5 +1,15 @@
 const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionsBitField, ChannelType } = require("discord.js");
 const mongoose = require("mongoose");
+const http = require("http"); // ✅ 추가
+
+// ✅ Render 포트 바인딩 (핵심)
+const PORT = process.env.PORT || 3000;
+http.createServer((req, res) => {
+  res.writeHead(200, { "Content-Type": "text/plain" });
+  res.end("Bot is running!");
+}).listen(PORT, () => {
+  console.log(`🌐 웹 서버 실행됨 (PORT: ${PORT})`);
+});
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
@@ -62,12 +72,10 @@ client.on("messageCreate", async m => {
 
   const user = await getUser(id);
 
-  // 잔액
   if(cmd==="잔액"){
     return m.reply({ embeds:[E("💳 잔액", `💰 **${f(user.money)}원**`, 0x00E5FF)] });
   }
 
-  // 돈줘
   if(cmd==="돈줘"){
     const now = Date.now();
     if(now - user.lastDaily < 86400000)
@@ -80,7 +88,6 @@ client.on("messageCreate", async m => {
     return m.reply({ embeds:[E("💰 지급 완료", `+10,000원\n현재: **${f(user.money)}원**`, 0x00FF88)] });
   }
 
-  // 송금
   if(cmd==="송금"){
     const target = m.mentions.users.first();
     const amount = parseInt(args[1]);
@@ -101,7 +108,6 @@ client.on("messageCreate", async m => {
     return m.reply({ embeds:[E("💸 송금 완료", `${target} → **${f(amount)}원**`, 0x00FFAA)] });
   }
 
-  // 슬롯 (애니메이션)
   if(cmd==="슬롯"){
     const bet = parseInt(args[1]);
 
@@ -143,7 +149,6 @@ client.on("messageCreate", async m => {
     });
   }
 
-  // 가위바위보
   if(cmd==="가위바위보"){
     const bet=parseInt(args[1]);
 
@@ -162,7 +167,6 @@ client.on("messageCreate", async m => {
     return m.reply({ embeds:[E("🎮 가위바위보", `배팅: **${bet}원**`)], components:[row] });
   }
 
-  // 랭킹
   if(cmd==="랭킹"){
     const top = await User.find().sort({ money:-1 }).limit(10);
 
@@ -173,7 +177,6 @@ client.on("messageCreate", async m => {
     return m.reply({ embeds:[E("🏆 TOP 10", desc, 0xFFD700)] });
   }
 
-  // 문의 (티켓)
   if(cmd==="문의"){
     const text = args.slice(1).join(" ");
     if(!text) return m.reply({ embeds:[E("❌ 오류","내용 입력",0xFF4D4D)] });
@@ -208,7 +211,6 @@ client.on("messageCreate", async m => {
     return m.reply({ embeds:[E("✅ 문의 생성", `${channel} 생성됨`,0x00FF88)] });
   }
 
-  // 경고
   if(cmd==="경고"){
     if(!m.member.permissions.has(PermissionsBitField.Flags.Administrator))
       return m.reply({ embeds:[E("❌","관리자만 가능",0xFF4D4D)] });
@@ -225,7 +227,6 @@ client.on("messageCreate", async m => {
     return m.reply({ embeds:[E("⚠️ 경고", `${target}\n사유: ${reason}\n누적: **${t.warns}회**`,0xFFA500)] });
   }
 
-  // 경고확인
   if(cmd==="경고확인"){
     const target = m.mentions.users.first() || m.author;
     const t = await getUser(target.id);
@@ -233,7 +234,6 @@ client.on("messageCreate", async m => {
     return m.reply({ embeds:[E("📊 경고 현황", `${target} → **${t.warns}회**`,0x00E5FF)] });
   }
 
-  // 경고해제
   if(cmd==="경고해제"){
     if(!m.member.permissions.has(PermissionsBitField.Flags.Administrator))
       return m.reply({ embeds:[E("❌","관리자만 가능",0xFF4D4D)] });
@@ -253,7 +253,6 @@ client.on("messageCreate", async m => {
 client.on("interactionCreate", async i=>{
   if(!i.isButton()) return;
 
-  // 티켓 닫기
   if(i.customId === "close_ticket"){
     if(!i.member.permissions.has(PermissionsBitField.Flags.Administrator))
       return i.reply({ content:"❌ 관리자만 가능", ephemeral:true });
@@ -267,7 +266,6 @@ client.on("interactionCreate", async i=>{
     return;
   }
 
-  // 가위바위보
   const id = i.user.id;
   const user = await getUser(id);
 
