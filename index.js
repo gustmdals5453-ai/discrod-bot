@@ -168,7 +168,7 @@ await user.save(); await u.save();
 return m.reply({embeds:[E("송금 완료").setDescription(`${t} ${amt}원\n잔액 ${f(user.money)}원`)]});
 }
 
-// ===== 카지노 명령어 복구 =====
+// ===== 카지노 =====
 
 if(cmd==="가위바위보"){
 const bet=Number(args[1]);
@@ -253,6 +253,7 @@ embeds:[C("슬롯").setDescription(`${rand(icons)} | ${rand(icons)} | ${rand(ico
 
 const r1=rand(icons),r2=rand(icons),r3=rand(icons);
 
+// 🔥 이 부분만 수정
 let change=-bet;
 if(r1===r2 && r2===r3) change=bet*10;
 else if(r1===r2 || r2===r3 || r1===r3) change=bet*2;
