@@ -4,37 +4,40 @@ const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder
 const mongoose = require("mongoose");
 const http = require("http");
 
+// ================== 웹 서버 ==================
 const PORT = process.env.PORT || 3000;
 http.createServer((req, res) => {
   res.writeHead(200, { "Content-Type": "text/plain" });
   res.end("Bot is running!");
 }).listen(PORT);
 
+// ================== 디스코드 ==================
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildMembers
+    GatewayIntentBits.GuildMembers // 🔥 통계용 추가
   ]
 });
 
 const prefix = "!";
 
+// ================== MongoDB ==================
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB 연결됨"))
   .catch(console.log);
 
-// 💎 고급 Embed
+// ================== 💎 한국협회 보고서 Embed ==================
 const E = (title) =>
   new EmbedBuilder()
     .setColor(0x111827)
-    .setAuthor({ name: "📊 KOREA ASSOCIATION DATA CENTER" })
+    .setAuthor({ name: "📊 한국협회 데이터 센터" })
     .setTitle(`┏━━━ ${title} ━━━┓`)
-    .setFooter({ text: "CONFIDENTIAL • INTERNAL REPORT SYSTEM" })
+    .setFooter({ text: "한국협회 • 내부 보고 시스템" })
     .setTimestamp();
 
-// ================== DB ==================
+// ================== 스키마 ==================
 const userSchema = new mongoose.Schema({
   userId: String,
   money: { type: Number, default: 0 },
@@ -55,59 +58,77 @@ const statsSchema = new mongoose.Schema({
 const User = mongoose.model("User", userSchema);
 const Stats = mongoose.model("Stats", statsSchema);
 
-async function getUser(id){
-  let u = await User.findOne({ userId:id });
-  if(!u) u = await User.create({ userId:id });
+async function getUser(id) {
+  let u = await User.findOne({ userId: id });
+  if (!u) u = await User.create({ userId: id });
   return u;
 }
-async function getStats(id){
-  let s = await Stats.findOne({ guildId:id });
-  if(!s) s = await Stats.create({ guildId:id });
+
+async function getStats(id) {
+  let s = await Stats.findOne({ guildId: id });
+  if (!s) s = await Stats.create({ guildId: id });
   return s;
 }
 
+// ================== 변수 ==================
 let game = {};
+let tickets = {};
+
 const symbols = ["🍒","🍋","🍊","🍇","💎","7️⃣"];
-const rand = a => a[Math.floor(Math.random()*a.length)];
+const rand = arr => arr[Math.floor(Math.random() * arr.length)];
+
+const choices = ["가위","바위","보"];
+const emojis = { 가위:"✌️", 바위:"✊", 보:"✋" };
+
 const f = n => n.toLocaleString();
 
-client.once("ready", ()=>console.log("✅ 로그인 완료"));
+// ================== READY ==================
+client.once("ready", () => console.log(`✅ 로그인됨: ${client.user.tag}`));
 
-client.on("guildMemberAdd", async m=>{
-  const s = await getStats(m.guild.id);
-  s.joins++; await s.save();
+// ================== 가입/퇴장 ==================
+client.on("guildMemberAdd", async member => {
+  const stats = await getStats(member.guild.id);
+  stats.joins++;
+  await stats.save();
 });
-client.on("guildMemberRemove", async m=>{
-  const s = await getStats(m.guild.id);
-  s.leaves++; await s.save();
+
+client.on("guildMemberRemove", async member => {
+  const stats = await getStats(member.guild.id);
+  stats.leaves++;
+  await stats.save();
 });
 
-client.on("messageCreate", async m=>{
-  if(m.author.bot || !m.guild || !m.content.startsWith(prefix)) return;
+// ================== 메시지 ==================
+client.on("messageCreate", async m => {
+  if (m.author.bot || !m.guild || !m.content.startsWith(prefix)) return;
 
-  const args = m.content.slice(prefix.length).split(/ +/);
+  const args = m.content.slice(prefix.length).trim().split(/ +/);
   const cmd = args[0];
   const id = m.author.id;
 
   const user = await getUser(id);
   const stats = await getStats(m.guild.id);
 
-  user.messages++; await user.save();
+  // 🔥 활동 기록
+  user.messages++;
+  await user.save();
 
   stats.totalMessages++;
   const hour = new Date().getHours();
   const day = new Date().getDay();
-  stats.hourly[hour] = (stats.hourly[hour]||0)+1;
-  stats.daily[day] = (stats.daily[day]||0)+1;
+
+  stats.hourly[hour] = (stats.hourly[hour] || 0) + 1;
+  stats.daily[day] = (stats.daily[day] || 0) + 1;
+
   await stats.save();
 
   // 💰 잔액
   if(cmd==="잔액"){
     return m.reply({
-      embeds:[E("ACCOUNT STATUS")
+      embeds:[E("계정 정보")
         .addFields(
-          { name:"💰 현재 잔액", value:`**${f(user.money)}원**`, inline:true },
-          { name:"📨 활동량", value:`${user.messages} msgs`, inline:true }
+          { name:"💰 잔액", value:`${f(user.money)}원`, inline:true },
+          { name:"📨 활동량", value:`${user.messages}회`, inline:true }
         )
       ]
     });
@@ -117,17 +138,17 @@ client.on("messageCreate", async m=>{
   if(cmd==="돈줘"){
     const now = Date.now();
     if(now - user.lastDaily < 86400000)
-      return m.reply({ embeds:[E("ACCESS DENIED").setDescription("⛔ DAILY LIMIT EXCEEDED")] });
+      return m.reply({ embeds:[E("접근 제한").setDescription("하루 1회만 가능")] });
 
     user.lastDaily = now;
     user.money += 10000;
     await user.save();
 
     return m.reply({
-      embeds:[E("TRANSACTION SUCCESS")
+      embeds:[E("지급 완료")
         .addFields(
-          { name:"지급 금액", value:"💰 10,000원", inline:true },
-          { name:"현재 잔액", value:`${f(user.money)}원`, inline:true }
+          { name:"지급", value:"10,000원", inline:true },
+          { name:"잔액", value:`${f(user.money)}원`, inline:true }
         )
       ]
     });
@@ -137,21 +158,24 @@ client.on("messageCreate", async m=>{
   if(cmd==="송금"){
     const target = m.mentions.users.first();
     const amount = parseInt(args[1]);
+
     if(!target || !amount) return;
 
-    const r = await getUser(target.id);
+    const receiver = await getUser(target.id);
     if(user.money < amount) return;
 
     user.money -= amount;
-    r.money += amount;
-    await user.save(); await r.save();
+    receiver.money += amount;
+
+    await user.save();
+    await receiver.save();
 
     return m.reply({
-      embeds:[E("FINANCIAL TRANSFER LOG")
+      embeds:[E("송금 기록")
         .addFields(
-          { name:"송신자", value:`${m.author}`, inline:true },
-          { name:"수신자", value:`${target}`, inline:true },
-          { name:"금액", value:`💰 ${f(amount)}원`, inline:false }
+          { name:"보낸 사람", value:`${m.author}`, inline:true },
+          { name:"받는 사람", value:`${target}`, inline:true },
+          { name:"금액", value:`${f(amount)}원` }
         )
       ]
     });
@@ -160,30 +184,40 @@ client.on("messageCreate", async m=>{
   // 🎰 슬롯 (애니메이션 유지)
   if(cmd==="슬롯"){
     const bet = parseInt(args[1]);
-    if(!bet || user.money < bet) return;
 
+    if(isNaN(bet) || user.money < bet) return;
     if(game[id]) return;
+
     game[id] = true;
 
-    let msg = await m.reply({ embeds:[E("SLOT MACHINE").setDescription("⏳ INITIALIZING...")] });
+    let msg = await m.reply({ embeds:[E("슬롯 머신").setDescription("회전 중...")] });
 
     for(let i=0;i<5;i++){
-      const r1=rand(symbols),r2=rand(symbols),r3=rand(symbols);
+      const r1 = rand(symbols);
+      const r2 = rand(symbols);
+      const r3 = rand(symbols);
+
       await msg.edit({
-        embeds:[E("SLOT MACHINE")
-          .setDescription(`\`${r1} | ${r2} | ${r3}\`\n\n⏳ PROCESSING...`)
+        embeds:[E("슬롯 머신")
+          .setDescription(`\`${r1} | ${r2} | ${r3}\`\n\n회전 중...`)
         ]
       });
-      await new Promise(r=>setTimeout(r,300));
+
+      await new Promise(r => setTimeout(r, 300));
     }
 
-    const r1=rand(symbols),r2=rand(symbols),r3=rand(symbols);
-    let win=(r1===r2&&r2===r3)?bet*5:(r1===r2||r2===r3||r1===r3)?bet*2:-bet;
+    const r1 = rand(symbols);
+    const r2 = rand(symbols);
+    const r3 = rand(symbols);
 
-    user.money+=win; await user.save(); delete game[id];
+    let win = (r1===r2&&r2===r3)?bet*5:(r1===r2||r2===r3||r1===r3)?bet*2:-bet;
+
+    user.money += win;
+    await user.save();
+    delete game[id];
 
     return msg.edit({
-      embeds:[E("SLOT RESULT")
+      embeds:[E("슬롯 결과")
         .setDescription(`\`${r1} | ${r2} | ${r3}\``)
         .addFields(
           { name:"결과", value:`${win}원`, inline:true },
@@ -193,16 +227,15 @@ client.on("messageCreate", async m=>{
     });
   }
 
-  // 🏆 랭킹
+  // 🏆 돈 랭킹
   if(cmd==="랭킹"){
-    const top = await User.find().sort({money:-1}).limit(10);
+    const top = await User.find().sort({ money:-1 }).limit(10);
 
     return m.reply({
-      embeds:[E("FINANCIAL RANKING")
-        .setDescription("TOP 10 WEALTH HOLDERS")
+      embeds:[E("자산 순위 보고서")
         .addFields(top.map((u,i)=>({
-          name:`#${i+1} RANK`,
-          value:`<@${u.userId}> • 💰 ${f(u.money)}원`
+          name:`${i+1}위`,
+          value:`<@${u.userId}> • ${f(u.money)}원`
         })))
       ]
     });
@@ -210,14 +243,13 @@ client.on("messageCreate", async m=>{
 
   // 🔥 활동 랭킹
   if(cmd==="활동랭킹"){
-    const top = await User.find().sort({messages:-1}).limit(10);
+    const top = await User.find().sort({ messages:-1 }).limit(10);
 
     return m.reply({
-      embeds:[E("ACTIVITY REPORT")
-        .setDescription("TOP ACTIVE USERS")
+      embeds:[E("활동 분석 보고서")
         .addFields(top.map((u,i)=>({
-          name:`#${i+1}`,
-          value:`<@${u.userId}> • ${u.messages} msgs`
+          name:`${i+1}위`,
+          value:`<@${u.userId}> • ${u.messages}회`
         })))
       ]
     });
@@ -227,24 +259,60 @@ client.on("messageCreate", async m=>{
   if(cmd==="통계"){
     const peakHour = Object.entries(stats.hourly).sort((a,b)=>b[1]-a[1])[0];
     const peakDay = Object.entries(stats.daily).sort((a,b)=>b[1]-a[1])[0];
-    const days=["일","월","화","수","목","금","토"];
+    const days = ["일","월","화","수","목","금","토"];
 
     return m.reply({
-      embeds:[E("SERVER ANALYTICS REPORT")
+      embeds:[E("서버 종합 분석")
         .addFields(
-          { name:"💬 총 메시지", value:`**${stats.totalMessages}**`, inline:true },
-          { name:"👥 유저 변화", value:`${stats.joins} / ${stats.leaves}`, inline:true },
-          { name:"🔥 피크 시간", value: peakHour ? peakHour[0]+"시":"없음", inline:true },
-          { name:"📅 피크 요일", value: peakDay ? days[peakDay[0]]+"요일":"없음", inline:true },
-          { name:"📈 활성도", value:`${Math.floor(stats.totalMessages/(stats.joins+1))}`, inline:true }
+          { name:"총 메시지", value:`${stats.totalMessages}`, inline:true },
+          { name:"가입/탈퇴", value:`${stats.joins}/${stats.leaves}`, inline:true },
+          { name:"활동 시간", value: peakHour?`${peakHour[0]}시`:"없음", inline:true },
+          { name:"활동 요일", value: peakDay?`${days[peakDay[0]]}요일`:"없음", inline:true }
         )
       ]
     });
   }
 
+  // 📩 문의 (유지)
+  if(cmd==="문의"){
+    const text = args.slice(1).join(" ");
+    if(!text) return;
+
+    if(tickets[id]) return;
+
+    const channel = await m.guild.channels.create({
+      name:`문의-${m.author.username}`,
+      type: ChannelType.GuildText
+    });
+
+    tickets[id] = channel.id;
+
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId("close_ticket")
+        .setLabel("닫기")
+        .setStyle(ButtonStyle.Danger)
+    );
+
+    await channel.send({
+      content:`<@${id}>`,
+      embeds:[E("문의 접수").setDescription(text)],
+      components:[row]
+    });
+
+    return m.reply({ embeds:[E("문의 생성 완료")] });
+  }
+
 });
 
-process.on("unhandledRejection", console.error);
-process.on("uncaughtException", console.error);
+// ================== 버튼 ==================
+client.on("interactionCreate", async i=>{
+  if(!i.isButton()) return;
+
+  if(i.customId==="close_ticket"){
+    await i.reply({ content:"삭제 중...", ephemeral:true });
+    setTimeout(()=>i.channel.delete(),2000);
+  }
+});
 
 client.login(process.env.TOKEN);
