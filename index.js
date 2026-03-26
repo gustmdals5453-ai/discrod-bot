@@ -11,6 +11,7 @@ const ownerId = "882120068232777728";
 let data = {};
 let game = {};
 let tickets = {};
+let warns = {}; // 경고 시스템: { 유저ID: [{by, reason, time}, ...] }
 
 const symbols = ["🍒","🍋","🍊","🍇","💎","7️⃣"];
 const getRandomSymbol = () => symbols[Math.floor(Math.random() * symbols.length)];
@@ -31,8 +32,9 @@ client.on("messageCreate", async message => {
   const id = message.author.id;
 
   if (!data[id]) data[id] = { money:0 };
+  if (!warns[id]) warns[id] = [];
 
-  // 슬롯/가위바위보 중복 방지
+  // ------------------ 기존 게임/송금/잔액 ------------------
   if (["슬롯","가위바위보"].includes(cmd) && game[id]) {
     return message.reply({ content:"❌ 이미 게임 중입니다" });
   }
@@ -121,6 +123,84 @@ client.on("messageCreate", async message => {
     const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId("ticket_create").setLabel("문의하기").setEmoji("📩").setStyle(ButtonStyle.Success));
     return message.reply({ embeds:[embed], components:[row] });
   }
+
+  // ------------------ 돈 랭킹 ------------------
+  if(cmd==="랭킹"){
+    const sorted = Object.entries(data)
+      .sort((a,b)=>b[1].money - a[1].money)
+      .slice(0,10);
+    if(sorted.length === 0) return message.reply("💹 돈 랭킹 데이터가 없습니다.");
+
+    const embed = new EmbedBuilder()
+      .setTitle("💹 돈 랭킹 TOP 10")
+      .setColor(0xFFD700)
+      .setDescription(sorted.map(([uid,d],i)=>`**${i+1}.** <@${uid}> - 💰 ${format(d.money)}원`).join("\n"))
+      .setFooter({ text: "🏆 돈이 많을수록 순위가 높습니다" });
+    return message.reply({ embeds:[embed] });
+  }
+
+  // ------------------ 경고 부여 ------------------
+  if(cmd==="경고"){
+    if(message.author.id!==ownerId) return message.reply("❌ 관리자만 사용 가능");
+    const target = message.mentions.users.first();
+    if(!target) return message.reply("❌ 유저 멘션 필요");
+
+    const reason = args.slice(2).join(" ");
+    if(!reason) return message.reply("❌ 경고 사유를 입력해주세요");
+
+    if(!warns[target.id]) warns[target.id] = [];
+    warns[target.id].push({ by: id, reason: reason, time: Date.now() });
+
+    const embed = new EmbedBuilder()
+      .setTitle("⚠️ 경고 부여")
+      .setColor(0xFF5252)
+      .setDescription(`<@${target.id}>님에게 경고를 부여했습니다.`)
+      .addFields(
+        { name: "관리자", value: `<@${id}>`, inline: true },
+        { name: "사유", value: reason, inline: true },
+        { name: "총 경고", value: `${warns[target.id].length}회`, inline: true }
+      )
+      .setTimestamp();
+    return message.reply({ embeds:[embed] });
+  }
+
+  // ------------------ 경고 해제 ------------------
+  if(cmd==="경고해제"){
+    if(message.author.id!==ownerId) return message.reply("❌ 관리자만 사용 가능");
+    const target = message.mentions.users.first();
+    if(!target) return message.reply("❌ 유저 멘션 필요");
+
+    if(!warns[target.id] || warns[target.id].length===0) return message.reply("❌ 경고가 없습니다.");
+
+    const removed = warns[target.id].pop();
+
+    const embed = new EmbedBuilder()
+      .setTitle("✅ 경고 해제")
+      .setColor(0x00E676)
+      .setDescription(`<@${target.id}>님의 경고가 해제되었습니다.`)
+      .addFields(
+        { name: "관리자", value: `<@${id}>`, inline: true },
+        { name: "해제된 사유", value: removed.reason, inline: true },
+        { name: "남은 경고", value: `${warns[target.id].length}회`, inline: true }
+      )
+      .setTimestamp();
+    return message.reply({ embeds:[embed] });
+  }
+
+  // ------------------ 경고 확인 ------------------
+  if(cmd==="경고확인"){
+    const target = message.mentions.users.first() || message.author;
+    if(!warns[target.id] || warns[target.id].length===0) return message.reply("⚠️ 경고가 없습니다.");
+
+    const embed = new EmbedBuilder()
+      .setTitle(`⚠️ ${target.username} 경고 목록`)
+      .setColor(0xFFAB00)
+      .setDescription(warns[target.id].map((w,i)=>`${i+1}. 사유: ${w.reason} | 관리자: <@${w.by}>`).join("\n"))
+      .setFooter({ text: `총 ${warns[target.id].length}회 경고` })
+      .setTimestamp();
+    return message.reply({ embeds:[embed] });
+  }
+
 });
 
 // ================== 버튼 ==================
