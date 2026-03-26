@@ -32,9 +32,18 @@ mongoose.connect(process.env.MONGO_URI)
 const E = (title, color = 0x111827) =>
   new EmbedBuilder()
     .setColor(color)
+    .setAuthor({ name: "한국협회" })
+    .setTitle(`┏━━━ ${title} ━━━┓`)
+    .setFooter({ text: "한국협회 • 시스템" })
+    .setTimestamp();
+
+// 🎰 카지노 전용
+const C = (title, color = 0x111827) =>
+  new EmbedBuilder()
+    .setColor(color)
     .setAuthor({ name: "한국협회 카지노 시스템" })
     .setTitle(`┏━━━ ${title} ━━━┓`)
-    .setFooter({ text: "한국협회 • 프리미엄 시스템" })
+    .setFooter({ text: "한국협회 • 프리미엄 카지노" })
     .setTimestamp();
 
 // ================== DB ==================
@@ -165,7 +174,7 @@ client.on("messageCreate", async m=>{
     if(isNaN(bet) || user.money < bet) return;
 
     return m.reply({
-      embeds:[E("슬롯").setDescription(`배팅: ${bet}원`)],
+      embeds:[C("슬롯").setDescription(`배팅: ${bet}원`)],
       components:[
         new ActionRowBuilder().addComponents(
           new ButtonBuilder().setCustomId(`slot_${bet}`).setLabel("🎰 돌리기").setStyle(ButtonStyle.Success)
@@ -188,18 +197,18 @@ client.on("messageCreate", async m=>{
     );
 
     return m.reply({
-      embeds:[E("가위바위보").setDescription(`배팅: ${bet}원`)],
+      embeds:[C("가위바위보").setDescription(`배팅: ${bet}원`)],
       components:[row]
     });
   }
 
-  // 🃏 블랙잭 버튼
+  // 🃏 블랙잭
   if(cmd==="블랙잭"){
     const bet = parseInt(args[1]);
     if(isNaN(bet) || user.money < bet) return;
 
     return m.reply({
-      embeds:[E("블랙잭").setDescription(`배팅: ${bet}원`)],
+      embeds:[C("블랙잭").setDescription(`배팅: ${bet}원`)],
       components:[
         new ActionRowBuilder().addComponents(
           new ButtonBuilder().setCustomId(`blackjack_${bet}`).setLabel("🃏 시작").setStyle(ButtonStyle.Primary)
@@ -208,13 +217,13 @@ client.on("messageCreate", async m=>{
     });
   }
 
-  // 🏦 바카라 버튼
+  // 🏦 바카라
   if(cmd==="바카라"){
     const bet = parseInt(args[1]);
     if(isNaN(bet) || user.money < bet) return;
 
     return m.reply({
-      embeds:[E("바카라").setDescription(`배팅: ${bet}원`)],
+      embeds:[C("바카라").setDescription(`배팅: ${bet}원`)],
       components:[
         new ActionRowBuilder().addComponents(
           new ButtonBuilder().setCustomId(`baccarat_player_${bet}`).setLabel("플레이어").setStyle(ButtonStyle.Primary),
@@ -293,58 +302,74 @@ client.on("interactionCreate", async i=>{
 
   const user = await getUser(i.user.id);
 
-  // 슬롯
+  // 🎰 슬롯 애니메이션
   if(i.customId.startsWith("slot_")){
     const bet = parseInt(i.customId.split("_")[1]);
+
+    await i.update({ embeds:[C("슬롯").setDescription("🎰 회전 중...")], components:[] });
+
+    await new Promise(r=>setTimeout(r,1000));
+
     const win = Math.random()>0.5;
     const change = win?bet:-bet;
 
     user.money += change;
     await user.save();
 
-    return i.update({
-      embeds:[E("슬롯 결과", win?0x00FF88:0xFF4D4D)
-        .setDescription(`${change}원\n잔액 ${f(user.money)}원`)],
-      components:[]
+    return i.editReply({
+      embeds:[C("슬롯 결과", win?0x00FF88:0xFF4D4D)
+        .setDescription(`${change}원\n잔액 ${f(user.money)}원`)]
     });
   }
 
-  // 블랙잭
+  // 🃏 블랙잭 애니메이션
   if(i.customId.startsWith("blackjack_")){
     const bet = parseInt(i.customId.split("_")[1]);
+
+    await i.update({ embeds:[C("블랙잭").setDescription("카드 توزيع 중...")], components:[] });
+
+    await new Promise(r=>setTimeout(r,1200));
+
     const win = Math.random()>0.5;
     const change = win?bet:-bet;
 
     user.money += change;
     await user.save();
 
-    return i.update({
-      embeds:[E("블랙잭 결과", win?0x00FF88:0xFF4D4D)
-        .setDescription(`${change}원\n잔액 ${f(user.money)}원`)],
-      components:[]
+    return i.editReply({
+      embeds:[C("블랙잭 결과", win?0x00FF88:0xFF4D4D)
+        .setDescription(`${change}원\n잔액 ${f(user.money)}원`)]
     });
   }
 
-  // 바카라
+  // 🏦 바카라 애니메이션
   if(i.customId.startsWith("baccarat_")){
     const bet = parseInt(i.customId.split("_")[2]);
+
+    await i.update({ embeds:[C("바카라").setDescription("카드 공개 중...")], components:[] });
+
+    await new Promise(r=>setTimeout(r,1200));
+
     const win = Math.random()>0.5;
     const change = win?bet:-bet;
 
     user.money += change;
     await user.save();
 
-    return i.update({
-      embeds:[E("바카라 결과", win?0x00FF88:0xFF4D4D)
-        .setDescription(`${change}원\n잔액 ${f(user.money)}원`)],
-      components:[]
+    return i.editReply({
+      embeds:[C("바카라 결과", win?0x00FF88:0xFF4D4D)
+        .setDescription(`${change}원\n잔액 ${f(user.money)}원`)]
     });
   }
 
-  // 가위바위보
+  // 🎮 가위바위보
   if(i.customId.startsWith("rps_")){
     const id = i.user.id;
     if(!game[id]) return;
+
+    await i.update({ embeds:[C("가위바위보").setDescription("🤖 선택 중...")], components:[] });
+
+    await new Promise(r=>setTimeout(r,800));
 
     const userC = i.customId.split("_")[1];
     const bot = rand(choices);
@@ -358,10 +383,9 @@ client.on("interactionCreate", async i=>{
     await user.save();
     delete game[id];
 
-    return i.update({
-      embeds:[E("가위바위보 결과", change>=0?0x00FF88:0xFF4D4D)
-        .setDescription(`${emojis[userC]} vs ${emojis[bot]}\n${change}원\n잔액 ${f(user.money)}원`)],
-      components:[]
+    return i.editReply({
+      embeds:[C("가위바위보 결과", change>=0?0x00FF88:0xFF4D4D)
+        .setDescription(`${emojis[userC]} vs ${emojis[bot]}\n${change}원\n잔액 ${f(user.money)}원`)]
     });
   }
 
