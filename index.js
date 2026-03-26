@@ -28,7 +28,7 @@ mongoose.connect(process.env.MONGO_URI)
   .catch(console.log);
 
 // ================== Embed ==================
-const E = (title, color = 0x5865F2) =>
+const E = (title, color = 0x00E5FF) =>
   new EmbedBuilder()
     .setColor(color)
     .setAuthor({ name: "한국협회" })
@@ -62,6 +62,7 @@ async function getUser(id){
 
 // ================== 변수 ==================
 let game = {};
+let tickets = {};
 
 const f = n => n.toLocaleString();
 const rand = arr => arr[Math.floor(Math.random()*arr.length)];
@@ -82,39 +83,50 @@ client.on("messageCreate", async m=>{
 
   const user = await getUser(id);
 
-  // 도움말
+  // ================== 도움말 ==================
   if(cmd==="도움말"){
     return m.reply({
       embeds:[
-        E("시스템 안내",0x00E5FF).setDescription(
-`경제 시스템
-잔액
-돈줘
-송금 @유저 금액
+        E("시스템 안내")
+        .setDescription(
+`경제
+\`\`\`
+!잔액 / !돈줘 / !송금 @유저 금액
+\`\`\`
 
-카지노 시스템
-슬롯 금액
-블랙잭 금액
-바카라 금액
-가위바위보 금액
+카지노
+\`\`\`
+!슬롯 금액
+!블랙잭 금액
+!바카라 금액
+!가위바위보 금액
+\`\`\`
 
-기타
 랭킹
-문의 내용
+\`\`\`
+!랭킹
+\`\`\`
 
-관리
-경고 @유저 사유
-경고확인
-경고초기화 @유저`
+경고
+\`\`\`
+!경고 @유저 사유
+!경고확인
+!경고초기화 @유저
+\`\`\`
+
+문의
+\`\`\`
+!문의 내용
+\`\`\``
         )
       ]
     });
   }
 
-  // 공지
+  // ================== 공지 ==================
   if(cmd==="공지"){
     if(!m.member.permissions.has(PermissionsBitField.Flags.Administrator))
-      return m.reply({ embeds:[E("오류",0xFF4D4D).setDescription("관리자만 가능")] });
+      return m.reply({ embeds:[E("오류",0xFF4D4D).setDescription("관리자만 사용 가능")] });
 
     const text = args.slice(1).join(" ");
     if(!text)
@@ -126,12 +138,11 @@ client.on("messageCreate", async m=>{
     });
   }
 
-  // 잔액
+  // ================== 경제 ==================
   if(cmd==="잔액"){
     return m.reply({ embeds:[E("잔액").setDescription(`${f(user.money)}원`)] });
   }
 
-  // 돈줘
   if(cmd==="돈줘"){
     const now = Date.now();
     if(now - user.lastDaily < 86400000)
@@ -144,7 +155,6 @@ client.on("messageCreate", async m=>{
     return m.reply({ embeds:[E("지급 완료").setDescription(`+10,000원\n잔액 ${f(user.money)}원`)] });
   }
 
-  // 송금
   if(cmd==="송금"){
     const target = m.mentions.users.first();
     const amount = parseInt(args[1]);
@@ -163,10 +173,13 @@ client.on("messageCreate", async m=>{
     await user.save();
     await r.save();
 
-    return m.reply({ embeds:[E("송금 완료").setDescription(`${target}에게 ${f(amount)}원\n잔액 ${f(user.money)}원`)] });
+    return m.reply({
+      embeds:[E("송금 완료")
+      .setDescription(`${target}에게 ${f(amount)}원\n잔액 ${f(user.money)}원`)]
+    });
   }
 
-  // 경고
+  // ================== 경고 ==================
   if(cmd==="경고"){
     if(!m.member.permissions.has(PermissionsBitField.Flags.Administrator))
       return m.reply({ embeds:[E("오류",0xFF4D4D).setDescription("관리자만 가능")] });
@@ -194,7 +207,7 @@ client.on("messageCreate", async m=>{
 
   if(cmd==="경고초기화"){
     if(!m.member.permissions.has(PermissionsBitField.Flags.Administrator))
-      return m.reply({ embeds:[E("오류",0xFF4D4D)] });
+      return m.reply({ embeds:[E("오류",0xFF4D4D).setDescription("관리자만 가능")] });
 
     const target = m.mentions.users.first();
     if(!target)
@@ -207,22 +220,27 @@ client.on("messageCreate", async m=>{
     return m.reply({ embeds:[E("초기화 완료",0x00FF88)] });
   }
 
-  // 문의
+  // ================== 문의 ==================
   if(cmd==="문의"){
     const text = args.slice(1).join(" ");
     if(!text)
       return m.reply({ embeds:[E("오류",0xFF4D4D).setDescription("문의 내용 입력")] });
+
+    if(tickets[id])
+      return m.reply({ embeds:[E("오류",0xFF4D4D).setDescription("이미 문의 있음")] });
 
     const ch = await m.guild.channels.create({
       name:`문의-${m.author.username}`,
       type: ChannelType.GuildText
     });
 
+    tickets[id] = ch.id;
+
     await ch.send({ embeds:[E("문의 접수").setDescription(text)] });
-    return m.reply({ embeds:[E("문의 생성")] });
+    return m.reply({ embeds:[E("문의 생성",0x00FF88)] });
   }
 
-  // 랭킹
+  // ================== 랭킹 ==================
   if(cmd==="랭킹"){
     const top = await User.find().sort({money:-1}).limit(10);
 
@@ -232,21 +250,39 @@ client.on("messageCreate", async m=>{
     });
   }
 
-  // 슬롯
-  if(cmd==="슬롯"){
+  // ================== 카지노 ==================
+  if(cmd==="슬롯"||cmd==="블랙잭"||cmd==="바카라"){
     const bet = parseInt(args[1]);
     if(isNaN(bet) || user.money < bet)
       return m.reply({ embeds:[E("오류",0xFF4D4D).setDescription("배팅 금액 입력")] });
 
+    let row;
+
+    if(cmd==="슬롯"){
+      row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId(`slot_${bet}`).setLabel("시작").setStyle(ButtonStyle.Success)
+      );
+    }
+
+    if(cmd==="블랙잭"){
+      row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId(`blackjack_${bet}`).setLabel("시작").setStyle(ButtonStyle.Primary)
+      );
+    }
+
+    if(cmd==="바카라"){
+      row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId(`baccarat_player_${bet}`).setLabel("플레이어").setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId(`baccarat_banker_${bet}`).setLabel("뱅커").setStyle(ButtonStyle.Danger)
+      );
+    }
+
     return m.reply({
-      embeds:[C("슬롯").setDescription(`배팅 ${bet}원`)],
-      components:[new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId(`slot_${bet}`).setLabel("돌리기").setStyle(ButtonStyle.Success)
-      )]
+      embeds:[C(cmd).setDescription(`배팅 ${bet}원`)],
+      components:[row]
     });
   }
 
-  // 가위바위보
   if(cmd==="가위바위보"){
     const bet = parseInt(args[1]);
     if(isNaN(bet) || user.money < bet)
@@ -260,35 +296,6 @@ client.on("messageCreate", async m=>{
         new ButtonBuilder().setCustomId("rps_가위").setLabel("가위").setStyle(ButtonStyle.Primary),
         new ButtonBuilder().setCustomId("rps_바위").setLabel("바위").setStyle(ButtonStyle.Primary),
         new ButtonBuilder().setCustomId("rps_보").setLabel("보").setStyle(ButtonStyle.Primary)
-      )]
-    });
-  }
-
-  // 블랙잭
-  if(cmd==="블랙잭"){
-    const bet = parseInt(args[1]);
-    if(isNaN(bet) || user.money < bet)
-      return m.reply({ embeds:[E("오류",0xFF4D4D).setDescription("배팅 금액 입력")] });
-
-    return m.reply({
-      embeds:[C("블랙잭").setDescription(`배팅 ${bet}원`)],
-      components:[new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId(`blackjack_${bet}`).setLabel("시작").setStyle(ButtonStyle.Primary)
-      )]
-    });
-  }
-
-  // 바카라
-  if(cmd==="바카라"){
-    const bet = parseInt(args[1]);
-    if(isNaN(bet) || user.money < bet)
-      return m.reply({ embeds:[E("오류",0xFF4D4D).setDescription("배팅 금액 입력")] });
-
-    return m.reply({
-      embeds:[C("바카라").setDescription(`배팅 ${bet}원`)],
-      components:[new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId(`baccarat_player_${bet}`).setLabel("플레이어").setStyle(ButtonStyle.Primary),
-        new ButtonBuilder().setCustomId(`baccarat_banker_${bet}`).setLabel("뱅커").setStyle(ButtonStyle.Danger)
       )]
     });
   }
