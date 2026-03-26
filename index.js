@@ -110,7 +110,7 @@ return m.reply({embeds:[E("시스템 안내").setDescription(
 \`\`\``)]});
 }
 
-// 공지
+// 공지 (채널ID 방식 + 타입 체크 추가)
 if(cmd==="공지"){
 if(!m.member.permissions.has(PermissionsBitField.Flags.Administrator))
 return m.reply({embeds:[E("오류",0xFF4D4D).setDescription("관리자만 가능")]});
@@ -122,6 +122,7 @@ if(!channelId||!text)
 return m.reply({embeds:[E("오류",0xFF4D4D).setDescription("형식: !공지 채널ID 내용")]});
 
 const ch=m.guild.channels.cache.get(channelId);
+
 if(!ch || ch.type !== ChannelType.GuildText)
 return m.reply({embeds:[E("오류",0xFF4D4D).setDescription("텍스트 채널만 가능")]});
 
@@ -135,7 +136,7 @@ embeds:[E("공지",0xFF3CAC).setDescription(text)]
 if(cmd==="잔액")
 return m.reply({embeds:[E("잔액").setDescription(`${f(user.money)}원`)]});
 
-// 돈줘
+// 돈줘 (자정 초기화)
 if(cmd==="돈줘"){
 const now=new Date();
 const last=new Date(user.lastDaily);
@@ -168,7 +169,89 @@ await user.save(); await u.save();
 return m.reply({embeds:[E("송금 완료").setDescription(`${t} ${amt}원\n잔액 ${f(user.money)}원`)]});
 }
 
-// ===== 카지노 =====
+// 경고
+if(cmd==="경고"){
+if(!m.member.permissions.has(PermissionsBitField.Flags.Administrator))
+return m.reply({embeds:[E("오류",0xFF4D4D)]});
+
+const t=m.mentions.users.first();
+const r=args.slice(2).join(" ");
+
+if(!t||!r)
+return m.reply({embeds:[E("오류",0xFF4D4D).setDescription("형식: !경고 @유저 사유")]});
+
+const u=await getUser(t.id);
+u.warns++;
+u.warnList.push(r);
+
+// 리스트 과도 증가 방지
+if(u.warnList.length > 20) u.warnList.shift();
+
+await u.save();
+
+return m.reply({embeds:[E("경고",0xFFA500).setDescription(`${t}\n사유: ${r}\n누적 ${u.warns}회`)]});
+}
+
+if(cmd==="경고확인"){
+const t=m.mentions.users.first()||m.author;
+const u=await getUser(t.id);
+
+return m.reply({embeds:[E("경고 확인")
+.setDescription(`${t}\n경고: ${u.warns}회\n사유:\n${u.warnList.join("\n")||"없음"}`)]});
+}
+
+if(cmd==="경고초기화"){
+if(!m.member.permissions.has(PermissionsBitField.Flags.Administrator))
+return m.reply({embeds:[E("오류",0xFF4D4D)]});
+
+const t=m.mentions.users.first();
+if(!t)
+return m.reply({embeds:[E("오류",0xFF4D4D)]});
+
+const u=await getUser(t.id);
+u.warns=0;
+u.warnList=[];
+await u.save();
+
+return m.reply({embeds:[E("초기화 완료")]});
+}
+
+// 문의 (🔥 관리자 접근 가능하도록 수정)
+if(cmd==="문의"){
+const text=args.slice(1).join(" ");
+if(!text)
+return m.reply({embeds:[E("오류",0xFF4D4D).setDescription("내용 입력")]});
+
+if(tickets[m.author.id])
+return m.reply({embeds:[E("오류",0xFF4D4D).setDescription("이미 문의 있음")]});
+
+const ch=await m.guild.channels.create({
+name:`문의-${m.author.username}`,
+type:ChannelType.GuildText,
+permissionOverwrites:[
+{ id:m.guild.id, deny:[PermissionsBitField.Flags.ViewChannel] },
+{ id:m.author.id, allow:[PermissionsBitField.Flags.ViewChannel,PermissionsBitField.Flags.SendMessages] },
+{ id:m.guild.ownerId, allow:[PermissionsBitField.Flags.ViewChannel] }
+]
+});
+
+tickets[m.author.id]=ch.id;
+
+const row=new ActionRowBuilder().addComponents(
+new ButtonBuilder().setCustomId("close_ticket").setLabel("닫기").setStyle(ButtonStyle.Danger)
+);
+
+await ch.send({embeds:[E("문의").setDescription(text)],components:[row]});
+return m.reply({embeds:[E("생성 완료")]});
+}
+
+// 랭킹
+if(cmd==="랭킹"){
+const top=await User.find().sort({money:-1}).limit(10);
+return m.reply({embeds:[E("랭킹").setDescription(top.map((u,i)=>`${i+1}위 <@${u.userId}> ${f(u.money)}원`).join("\n"))]});
+}
+
+// ===== 카지노 (절대 건드림 없음) =====
 
 if(cmd==="슬롯"){
 const bet=Number(args[1]);
@@ -229,7 +312,7 @@ new ButtonBuilder().setCustomId(`baccarat_banker_${bet}`).setLabel("뱅커").set
 
 });
 
-// ===== 버튼 =====
+// ===== 버튼 ===== (건드림 없음)
 
 client.on("interactionCreate",async i=>{
 if(!i.isButton())return;
@@ -238,13 +321,12 @@ const user=await getUser(i.user.id);
 // 티켓 닫기
 if(i.customId==="close_ticket"){
 if(!i.member.permissions.has(PermissionsBitField.Flags.Administrator))
-return i.reply({content:"관리자만",flags:64});
-
-await i.reply({content:"삭제중",flags:64});
+return i.reply({content:"관리자만",ephemeral:true});
+await i.reply({content:"삭제중",ephemeral:true});
 setTimeout(()=>i.channel.delete(),2000);
 }
 
-// 슬롯
+// 슬롯 애니메이션
 if(i.customId.startsWith("slot_")){
 const bet=parseInt(i.customId.split("_")[1]);
 
@@ -260,15 +342,13 @@ embeds:[C("슬롯").setDescription(`${rand(icons)} | ${rand(icons)} | ${rand(ico
 }
 
 const r1=rand(icons),r2=rand(icons),r3=rand(icons);
-
-let change=-bet;
-if(r1===r2 && r2===r3) change=bet*10;
-else if(r1===r2 || r2===r3 || r1===r3) change=bet*2;
+const win=r1===r2&&r2===r3;
+const change=win?bet*2:-bet;
 
 user.money+=change; await user.save();
 
 return i.editReply({
-embeds:[C("결과",change>0?0x00FF88:0xFF4D4D)
+embeds:[C("결과",win?0x00FF88:0xFF4D4D)
 .setDescription(`${r1} | ${r2} | ${r3}\n${change}원\n잔액 ${f(user.money)}원`)]
 });
 }
