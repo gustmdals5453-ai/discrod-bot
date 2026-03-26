@@ -168,84 +168,50 @@ await user.save(); await u.save();
 return m.reply({embeds:[E("송금 완료").setDescription(`${t} ${amt}원\n잔액 ${f(user.money)}원`)]});
 }
 
-// 경고
-if(cmd==="경고"){
-if(!m.member.permissions.has(PermissionsBitField.Flags.Administrator))
+// ===== 카지노 명령어 복구 =====
+
+if(cmd==="가위바위보"){
+const bet=Number(args[1]);
+if(isNaN(bet)||user.money<bet)
 return m.reply({embeds:[E("오류",0xFF4D4D)]});
 
-const t=m.mentions.users.first();
-const r=args.slice(2).join(" ");
+game[m.author.id]=bet;
 
-if(!t||!r)
-return m.reply({embeds:[E("오류",0xFF4D4D).setDescription("형식: !경고 @유저 사유")]});
-
-const u=await getUser(t.id);
-u.warns++;
-u.warnList.push(r);
-if(u.warnList.length > 20) u.warnList.shift();
-
-await u.save();
-
-return m.reply({embeds:[E("경고",0xFFA500).setDescription(`${t}\n사유: ${r}\n누적 ${u.warns}회`)]});
-}
-
-if(cmd==="경고확인"){
-const t=m.mentions.users.first()||m.author;
-const u=await getUser(t.id);
-
-return m.reply({embeds:[E("경고 확인")
-.setDescription(`${t}\n경고: ${u.warns}회\n사유:\n${u.warnList.join("\n")||"없음"}`)]});
-}
-
-if(cmd==="경고초기화"){
-if(!m.member.permissions.has(PermissionsBitField.Flags.Administrator))
-return m.reply({embeds:[E("오류",0xFF4D4D)]});
-
-const t=m.mentions.users.first();
-if(!t)
-return m.reply({embeds:[E("오류",0xFF4D4D)]});
-
-const u=await getUser(t.id);
-u.warns=0;
-u.warnList=[];
-await u.save();
-
-return m.reply({embeds:[E("초기화 완료")]});
-}
-
-// 문의
-if(cmd==="문의"){
-const text=args.slice(1).join(" ");
-if(!text)
-return m.reply({embeds:[E("오류",0xFF4D4D).setDescription("내용 입력")]});
-
-if(tickets[m.author.id])
-return m.reply({embeds:[E("오류",0xFF4D4D).setDescription("이미 문의 있음")]});
-
-const ch=await m.guild.channels.create({
-name:`문의-${m.author.username}`,
-type:ChannelType.GuildText,
-permissionOverwrites:[
-{ id:m.guild.id, deny:[PermissionsBitField.Flags.ViewChannel] },
-{ id:m.author.id, allow:[PermissionsBitField.Flags.ViewChannel,PermissionsBitField.Flags.SendMessages] },
-{ id:m.guild.ownerId, allow:[PermissionsBitField.Flags.ViewChannel] }
-]
+return m.reply({
+embeds:[C("가위바위보").setDescription(`배팅 ${bet}`)],
+components:[new ActionRowBuilder().addComponents(
+new ButtonBuilder().setCustomId("rps_가위").setLabel("가위").setStyle(ButtonStyle.Primary),
+new ButtonBuilder().setCustomId("rps_바위").setLabel("바위").setStyle(ButtonStyle.Primary),
+new ButtonBuilder().setCustomId("rps_보").setLabel("보").setStyle(ButtonStyle.Primary)
+)]
 });
-
-tickets[m.author.id]=ch.id;
-
-const row=new ActionRowBuilder().addComponents(
-new ButtonBuilder().setCustomId("close_ticket").setLabel("닫기").setStyle(ButtonStyle.Danger)
-);
-
-await ch.send({embeds:[E("문의").setDescription(text)],components:[row]});
-return m.reply({embeds:[E("생성 완료")]});
 }
 
-// 랭킹
-if(cmd==="랭킹"){
-const top=await User.find().sort({money:-1}).limit(10);
-return m.reply({embeds:[E("랭킹").setDescription(top.map((u,i)=>`${i+1}위 <@${u.userId}> ${f(u.money)}원`).join("\n"))]});
+if(cmd==="블랙잭"){
+const bet=Number(args[1]);
+if(isNaN(bet)||user.money<bet)
+return m.reply({embeds:[E("오류",0xFF4D4D)]});
+
+return m.reply({
+embeds:[C("블랙잭").setDescription(`배팅 ${bet}`)],
+components:[new ActionRowBuilder().addComponents(
+new ButtonBuilder().setCustomId(`blackjack_${bet}`).setLabel("시작").setStyle(ButtonStyle.Primary)
+)]
+});
+}
+
+if(cmd==="바카라"){
+const bet=Number(args[1]);
+if(isNaN(bet)||user.money<bet)
+return m.reply({embeds:[E("오류",0xFF4D4D)]});
+
+return m.reply({
+embeds:[C("바카라").setDescription(`배팅 ${bet}`)],
+components:[new ActionRowBuilder().addComponents(
+new ButtonBuilder().setCustomId(`baccarat_player_${bet}`).setLabel("플레이어").setStyle(ButtonStyle.Primary),
+new ButtonBuilder().setCustomId(`baccarat_banker_${bet}`).setLabel("뱅커").setStyle(ButtonStyle.Danger)
+)]
+});
 }
 
 // 슬롯
@@ -264,12 +230,13 @@ new ButtonBuilder().setCustomId(`slot_${bet}`).setLabel("시작").setStyle(Butto
 
 });
 
-// 버튼
+// ===== 버튼 =====
+
 client.on("interactionCreate",async i=>{
 if(!i.isButton())return;
 const user=await getUser(i.user.id);
 
-// 슬롯 애니메이션
+// 슬롯
 if(i.customId.startsWith("slot_")){
 const bet=parseInt(i.customId.split("_")[1]);
 
@@ -286,7 +253,6 @@ embeds:[C("슬롯").setDescription(`${rand(icons)} | ${rand(icons)} | ${rand(ico
 
 const r1=rand(icons),r2=rand(icons),r3=rand(icons);
 
-// ✅ 수정된 배당
 let change=-bet;
 if(r1===r2 && r2===r3) change=bet*10;
 else if(r1===r2 || r2===r3 || r1===r3) change=bet*2;
@@ -296,6 +262,49 @@ user.money+=change; await user.save();
 return i.editReply({
 embeds:[C("결과",change>0?0x00FF88:0xFF4D4D)
 .setDescription(`${r1} | ${r2} | ${r3}\n${change}원\n잔액 ${f(user.money)}원`)]
+});
+}
+
+// 공통 게임
+const run=async(d,t)=>{
+await i.update({embeds:[C(t).setDescription("진행 중...")],components:[]});
+await new Promise(r=>setTimeout(r,d));
+
+const bet=parseInt(i.customId.split("_").pop());
+const win=Math.random()>0.5;
+const change=win?bet:-bet;
+
+user.money+=change; await user.save();
+
+return i.editReply({
+embeds:[C("결과",win?0x00FF88:0xFF4D4D)
+.setDescription(`${change}원\n잔액 ${f(user.money)}원`)]
+});
+};
+
+if(i.customId.startsWith("blackjack_"))return run(1200,"블랙잭");
+if(i.customId.startsWith("baccarat_"))return run(1200,"바카라");
+
+// 가위바위보
+if(i.customId.startsWith("rps_")){
+const bet=game[i.user.id];
+if(!bet)return;
+
+await i.update({embeds:[C("가위바위보").setDescription("선택 중...")],components:[]});
+await new Promise(r=>setTimeout(r,800));
+
+const userC=i.customId.split("_")[1];
+const bot=rand(choices);
+
+let change=0;
+if((userC==="가위"&&bot==="보")||(userC==="바위"&&bot==="가위")||(userC==="보"&&bot==="바위"))change=bet;
+else if(userC!==bot)change=-bet;
+
+user.money+=change; await user.save();
+delete game[i.user.id];
+
+return i.editReply({
+embeds:[C("결과").setDescription(`${emojis[userC]} vs ${emojis[bot]}\n${change}원\n잔액 ${f(user.money)}원`)]
 });
 }
 
