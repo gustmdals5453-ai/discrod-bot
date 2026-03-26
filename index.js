@@ -1,4 +1,3 @@
-// ================== discord.js ==================
 const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionsBitField } = require("discord.js");
 const mongoose = require("mongoose");
 
@@ -13,89 +12,84 @@ mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB 연결됨"))
   .catch(err => console.log(err));
 
-// 유저 스키마
+// ================== Embed ==================
+const E = (title, desc, color = 0x5865F2) =>
+  new EmbedBuilder()
+    .setColor(color)
+    .setTitle(title)
+    .setDescription(desc)
+    .setFooter({ text: "💎 Economy System" })
+    .setTimestamp();
+
+// ================== 스키마 ==================
 const userSchema = new mongoose.Schema({
   userId: String,
   money: { type: Number, default: 0 },
-  lastDaily: { type: Number, default: 0 }
+  lastDaily: { type: Number, default: 0 },
+  warns: { type: Number, default: 0 }
 });
 
 const User = mongoose.model("User", userSchema);
 
-// 유저 불러오기 함수
 async function getUser(id) {
-  let user = await User.findOne({ userId: id });
-  if (!user) user = await User.create({ userId: id });
-  return user;
+  let u = await User.findOne({ userId: id });
+  if (!u) u = await User.create({ userId: id });
+  return u;
 }
 
 // ================== 변수 ==================
 let game = {};
-let tickets = {};
-let warns = {};
 
 const symbols = ["🍒","🍋","🍊","🍇","💎","7️⃣"];
-const getRandomSymbol = () => symbols[Math.floor(Math.random() * symbols.length)];
+const rand = arr => arr[Math.floor(Math.random() * arr.length)];
 
 const choices = ["가위","바위","보"];
 const emojis = { 가위:"✌️", 바위:"✊", 보:"✋" };
 
-const format = n => n.toLocaleString();
+const f = n => n.toLocaleString();
 
 // ================== READY ==================
 client.once("ready", () => console.log(`✅ 로그인됨: ${client.user.tag}`));
 
 // ================== 메시지 ==================
-client.on("messageCreate", async message => {
-  if (message.author.bot || !message.content.startsWith(prefix)) return;
+client.on("messageCreate", async m => {
+  if (m.author.bot || !m.content.startsWith(prefix)) return;
 
-  const args = message.content.slice(prefix.length).trim().split(/ +/);
+  const args = m.content.slice(prefix.length).trim().split(/ +/);
   const cmd = args[0];
-  const id = message.author.id;
+  const id = m.author.id;
 
   const user = await getUser(id);
 
-  // 중복 게임 방지
-  if (["슬롯","가위바위보"].includes(cmd) && game[id]) {
-    return message.reply("❌ 이미 게임 중입니다");
-  }
-
-  // 💳 잔액
+  // ================== 잔액 ==================
   if(cmd==="잔액"){
-    return message.reply({
-      embeds:[new EmbedBuilder()
-        .setColor(0x00E5FF)
-        .setTitle("💳 내 잔액")
-        .setDescription(`💰 ${format(user.money)}원`)]
-    });
+    return m.reply({ embeds:[E("💳 잔액", `💰 **${f(user.money)}원**`, 0x00E5FF)] });
   }
 
-  // 💰 돈줘
+  // ================== 돈줘 ==================
   if(cmd==="돈줘"){
     const now = Date.now();
-    if(now - user.lastDaily < 86400000){
-      return message.reply("❌ 하루 1번만 가능");
-    }
+    if(now - user.lastDaily < 86400000)
+      return m.reply({ embeds:[E("❌ 제한", "하루 1번만 가능", 0xFF4D4D)] });
 
     user.lastDaily = now;
     user.money += 10000;
     await user.save();
 
-    return message.reply(`💰 +10,000원\n💳 ${format(user.money)}원`);
+    return m.reply({ embeds:[E("💰 지급 완료", `+10,000원\n현재: **${f(user.money)}원**`, 0x00FF88)] });
   }
 
-  // 💸 송금
+  // ================== 송금 ==================
   if(cmd==="송금"){
-    const target = message.mentions.users.first();
-    const amount = parseInt(args.find(a=>!isNaN(a)));
+    const target = m.mentions.users.first();
+    const amount = parseInt(args[1]);
 
-    if(!target) return message.reply("❌ 유저 멘션 필요");
-    if(!amount || amount<=0) return message.reply("❌ 금액 입력");
-    if(target.id===id) return message.reply("❌ 자기 자신 불가");
+    if(!target) return m.reply({ embeds:[E("❌ 오류","유저 멘션 필요",0xFF4D4D)] });
+    if(!amount || amount<=0) return m.reply({ embeds:[E("❌ 오류","금액 입력",0xFF4D4D)] });
 
     const receiver = await getUser(target.id);
-
-    if(user.money < amount) return message.reply("💸 돈 부족");
+    if(user.money < amount)
+      return m.reply({ embeds:[E("💸 실패","잔액 부족",0xFF4D4D)] });
 
     user.money -= amount;
     receiver.money += amount;
@@ -103,45 +97,46 @@ client.on("messageCreate", async message => {
     await user.save();
     await receiver.save();
 
-    return message.reply(`💸 송금 완료\n💰 ${format(amount)}원`);
+    return m.reply({ embeds:[E("💸 송금 완료", `${target} → **${f(amount)}원**`, 0x00FFAA)] });
   }
 
-  // 🎰 슬롯
+  // ================== 슬롯 ==================
   if(cmd==="슬롯"){
     const bet = parseInt(args[1]);
 
-    if(isNaN(bet)) return message.reply("❌ 금액 입력");
-    if(user.money < bet) return message.reply("💸 돈 부족");
+    if(isNaN(bet)) return m.reply({ embeds:[E("❌ 오류","금액 입력",0xFF4D4D)] });
+    if(user.money < bet) return m.reply({ embeds:[E("💸 실패","돈 부족",0xFF4D4D)] });
+
+    if(game[id]) return m.reply({ embeds:[E("❌","이미 게임 중",0xFF4D4D)] });
 
     game[id] = true;
 
-    let msg = await message.reply("🎰 스핀 중...");
+    let msg = await m.reply("🎰 돌리는 중...");
+    await new Promise(r=>setTimeout(r,1000));
 
-    for(let i=0;i<5;i++){
-      await new Promise(r=>setTimeout(r,200));
-    }
+    const r1 = rand(symbols), r2 = rand(symbols), r3 = rand(symbols);
 
-    const [f1,f2,f3] = [getRandomSymbol(), getRandomSymbol(), getRandomSymbol()];
-    let win=0;
-
-    if(f1===f2 && f2===f3) win=bet*5;
-    else if(f1===f2||f2===f3||f1===f3) win=bet*2;
-    else win=-bet;
+    let win = (r1===r2&&r2===r3) ? bet*5 :
+              (r1===r2||r2===r3||r1===r3) ? bet*2 : -bet;
 
     user.money += win;
     await user.save();
-
     delete game[id];
 
-    return msg.edit(`🎰 ${f1} | ${f2} | ${f3}\n💰 ${win}원\n💳 ${format(user.money)}원`);
+    return msg.edit({
+      embeds:[E("🎰 슬롯",
+        `\`${r1} | ${r2} | ${r3}\`\n\n💰 결과: **${win}원**\n💳 잔액: **${f(user.money)}원**`,
+        win>=0?0x00FF88:0xFF4D4D)]
+    });
   }
 
-  // 🎮 가위바위보
+  // ================== 가위바위보 ==================
   if(cmd==="가위바위보"){
     const bet=parseInt(args[1]);
 
-    if(isNaN(bet)) return message.reply("❌ 금액 입력");
-    if(user.money < bet) return message.reply("💸 돈 부족");
+    if(isNaN(bet)) return m.reply({ embeds:[E("❌ 오류","금액 입력",0xFF4D4D)] });
+    if(user.money < bet) return m.reply({ embeds:[E("💸 실패","돈 부족",0xFF4D4D)] });
+    if(game[id]) return m.reply({ embeds:[E("❌","이미 게임 중",0xFF4D4D)] });
 
     game[id] = bet;
 
@@ -151,16 +146,82 @@ client.on("messageCreate", async message => {
       new ButtonBuilder().setCustomId("rps_보").setEmoji("✋").setStyle(ButtonStyle.Primary)
     );
 
-    return message.reply({ content:`💸 ${bet}원 배팅`, components:[row] });
+    return m.reply({ embeds:[E("🎮 가위바위보", `배팅: **${bet}원**`)], components:[row] });
   }
 
-  // 🏆 랭킹
+  // ================== 랭킹 ==================
   if(cmd==="랭킹"){
     const top = await User.find().sort({ money:-1 }).limit(10);
 
-    let desc = top.map((u,i)=>`${i+1}. <@${u.userId}> - ${format(u.money)}원`).join("\n");
+    const desc = top.map((u,i)=>
+      `**${i+1}위** <@${u.userId}> — 💰 ${f(u.money)}원`
+    ).join("\n");
 
-    return message.reply(`🏆 랭킹\n${desc}`);
+    return m.reply({ embeds:[E("🏆 TOP 10", desc, 0xFFD700)] });
+  }
+
+  // ================== 문의 ==================
+  if(cmd==="문의"){
+    const text = args.slice(1).join(" ");
+    if(!text) return m.reply({ embeds:[E("❌ 오류","내용 입력",0xFF4D4D)] });
+
+    const owner = await client.users.fetch(process.env.OWNER_ID);
+
+    owner.send({
+      embeds:[E("📩 문의",
+        `👤 ${m.author.tag}\n📝 ${text}`,0x00E5FF)]
+    });
+
+    return m.reply({ embeds:[E("✅ 완료","관리자에게 전달됨",0x00FF88)] });
+  }
+
+  // ================== 경고 ==================
+  if(cmd==="경고"){
+    if(!m.member.permissions.has(PermissionsBitField.Flags.Administrator))
+      return m.reply({ embeds:[E("❌","관리자만 가능",0xFF4D4D)] });
+
+    const target = m.mentions.users.first();
+    const reason = args.slice(2).join(" ") || "없음";
+
+    if(!target) return m.reply({ embeds:[E("❌","유저 멘션",0xFF4D4D)] });
+
+    const t = await getUser(target.id);
+    t.warns++;
+    await t.save();
+
+    return m.reply({
+      embeds:[E("⚠️ 경고",
+        `${target}\n사유: ${reason}\n누적: **${t.warns}회**`,0xFFA500)]
+    });
+  }
+
+  // ================== 경고확인 ==================
+  if(cmd==="경고확인"){
+    const target = m.mentions.users.first() || m.author;
+    const t = await getUser(target.id);
+
+    return m.reply({
+      embeds:[E("📊 경고 현황",
+        `${target} → **${t.warns}회**`,0x00E5FF)]
+    });
+  }
+
+  // ================== 경고해제 ==================
+  if(cmd==="경고해제"){
+    if(!m.member.permissions.has(PermissionsBitField.Flags.Administrator))
+      return m.reply({ embeds:[E("❌","관리자만 가능",0xFF4D4D)] });
+
+    const target = m.mentions.users.first();
+    if(!target) return m.reply({ embeds:[E("❌","유저 멘션",0xFF4D4D)] });
+
+    const t = await getUser(target.id);
+    t.warns = 0;
+    await t.save();
+
+    return m.reply({
+      embeds:[E("✅ 초기화",
+        `${target} 경고 초기화`,0x00FF88)]
+    });
   }
 });
 
@@ -169,30 +230,29 @@ client.on("interactionCreate", async i=>{
   if(!i.isButton()) return;
 
   const id = i.user.id;
-  const userDB = await getUser(id);
+  const user = await getUser(id);
 
-  if(i.customId.startsWith("rps_")){
-    if(!game[id]) return i.reply({ content:"❌ 게임 없음", ephemeral:true });
+  if(!game[id]) return i.reply({ content:"❌ 게임 없음", ephemeral:true });
 
-    const userChoice = i.customId.split("_")[1];
-    const bot = choices[Math.floor(Math.random()*3)];
-    const bet = game[id];
+  const userC = i.customId.split("_")[1];
+  const bot = rand(choices);
+  const bet = game[id];
 
-    let change=0;
+  let change = 0;
 
-    if((userChoice==="가위"&&bot==="보")||(userChoice==="바위"&&bot==="가위")||(userChoice==="보"&&bot==="바위")) change=bet;
-    else if(userChoice!==bot) change=-bet;
+  if((userC==="가위"&&bot==="보")||(userC==="바위"&&bot==="가위")||(userC==="보"&&bot==="바위")) change=bet;
+  else if(userC!==bot) change=-bet;
 
-    userDB.money += change;
-    await userDB.save();
+  user.money += change;
+  await user.save();
+  delete game[id];
 
-    delete game[id];
-
-    return i.update({
-      content:`${emojis[userChoice]} vs ${emojis[bot]}\n💰 ${change}원\n💳 ${format(userDB.money)}원`,
-      components:[]
-    });
-  }
+  return i.update({
+    embeds:[E("🎮 결과",
+      `${emojis[userC]} vs ${emojis[bot]}\n💰 ${change}원\n💳 ${f(user.money)}원`,
+      change>=0?0x00FF88:0xFF4D4D)],
+    components:[]
+  });
 });
 
 client.login(process.env.TOKEN);
