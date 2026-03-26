@@ -28,7 +28,7 @@ mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB 연결됨"))
   .catch(console.log);
 
-// ================== 💎 Embed ==================
+// ================== Embed ==================
 const E = (title, color = 0x111827) =>
   new EmbedBuilder()
     .setColor(color)
@@ -62,8 +62,6 @@ const rand = arr => arr[Math.floor(Math.random()*arr.length)];
 
 const choices = ["가위","바위","보"];
 const emojis = { 가위:"✌️", 바위:"✊", 보:"✋" };
-
-const cards = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
 
 // ================== READY ==================
 client.once("ready", ()=>console.log(`✅ 로그인됨: ${client.user.tag}`));
@@ -161,6 +159,21 @@ client.on("messageCreate", async m=>{
     });
   }
 
+  // 🎰 슬롯 버튼
+  if(cmd==="슬롯"){
+    const bet = parseInt(args[1]);
+    if(isNaN(bet) || user.money < bet) return;
+
+    return m.reply({
+      embeds:[E("슬롯").setDescription(`배팅: ${bet}원`)],
+      components:[
+        new ActionRowBuilder().addComponents(
+          new ButtonBuilder().setCustomId(`slot_${bet}`).setLabel("🎰 돌리기").setStyle(ButtonStyle.Success)
+        )
+      ]
+    });
+  }
+
   // 🎮 가위바위보
   if(cmd==="가위바위보"){
     const bet = parseInt(args[1]);
@@ -180,54 +193,34 @@ client.on("messageCreate", async m=>{
     });
   }
 
-  // 🎰 슬롯
-  if(cmd==="슬롯"){
-    const bet = parseInt(args[1]);
-    if(isNaN(bet) || user.money < bet) return;
-
-    const win = Math.random() > 0.5;
-    const change = win ? bet : -bet;
-
-    user.money += change;
-    await user.save();
-
-    return m.reply({
-      embeds:[E("슬롯", win?0x00FF88:0xFF4D4D)
-        .setDescription(`${change}원\n잔액 ${f(user.money)}원`)]
-    });
-  }
-
-  // 🃏 블랙잭
+  // 🃏 블랙잭 버튼
   if(cmd==="블랙잭"){
     const bet = parseInt(args[1]);
     if(isNaN(bet) || user.money < bet) return;
 
-    const win = Math.random()>0.5;
-    const change = win?bet:-bet;
-
-    user.money+=change;
-    await user.save();
-
     return m.reply({
-      embeds:[E("블랙잭", win?0x00FF88:0xFF4D4D)
-        .setDescription(`${change}원\n잔액 ${f(user.money)}원`)]
+      embeds:[E("블랙잭").setDescription(`배팅: ${bet}원`)],
+      components:[
+        new ActionRowBuilder().addComponents(
+          new ButtonBuilder().setCustomId(`blackjack_${bet}`).setLabel("🃏 시작").setStyle(ButtonStyle.Primary)
+        )
+      ]
     });
   }
 
-  // 🏦 바카라
+  // 🏦 바카라 버튼
   if(cmd==="바카라"){
     const bet = parseInt(args[1]);
     if(isNaN(bet) || user.money < bet) return;
 
-    const win = Math.random()>0.5;
-    const change = win?bet:-bet;
-
-    user.money+=change;
-    await user.save();
-
     return m.reply({
-      embeds:[E("바카라", win?0x00FF88:0xFF4D4D)
-        .setDescription(`${change}원\n잔액 ${f(user.money)}원`)]
+      embeds:[E("바카라").setDescription(`배팅: ${bet}원`)],
+      components:[
+        new ActionRowBuilder().addComponents(
+          new ButtonBuilder().setCustomId(`baccarat_player_${bet}`).setLabel("플레이어").setStyle(ButtonStyle.Primary),
+          new ButtonBuilder().setCustomId(`baccarat_banker_${bet}`).setLabel("뱅커").setStyle(ButtonStyle.Danger)
+        )
+      ]
     });
   }
 
@@ -298,19 +291,61 @@ client.on("messageCreate", async m=>{
 client.on("interactionCreate", async i=>{
   if(!i.isButton()) return;
 
-  if(i.customId==="close"){
-    if(!i.member.permissions.has(PermissionsBitField.Flags.Administrator))
-      return i.reply({ content:"관리자만 가능", ephemeral:true });
+  const user = await getUser(i.user.id);
 
-    await i.reply({ content:"삭제 중...", ephemeral:true });
-    setTimeout(()=>i.channel.delete(),2000);
+  // 슬롯
+  if(i.customId.startsWith("slot_")){
+    const bet = parseInt(i.customId.split("_")[1]);
+    const win = Math.random()>0.5;
+    const change = win?bet:-bet;
+
+    user.money += change;
+    await user.save();
+
+    return i.update({
+      embeds:[E("슬롯 결과", win?0x00FF88:0xFF4D4D)
+        .setDescription(`${change}원\n잔액 ${f(user.money)}원`)],
+      components:[]
+    });
   }
 
+  // 블랙잭
+  if(i.customId.startsWith("blackjack_")){
+    const bet = parseInt(i.customId.split("_")[1]);
+    const win = Math.random()>0.5;
+    const change = win?bet:-bet;
+
+    user.money += change;
+    await user.save();
+
+    return i.update({
+      embeds:[E("블랙잭 결과", win?0x00FF88:0xFF4D4D)
+        .setDescription(`${change}원\n잔액 ${f(user.money)}원`)],
+      components:[]
+    });
+  }
+
+  // 바카라
+  if(i.customId.startsWith("baccarat_")){
+    const bet = parseInt(i.customId.split("_")[2]);
+    const win = Math.random()>0.5;
+    const change = win?bet:-bet;
+
+    user.money += change;
+    await user.save();
+
+    return i.update({
+      embeds:[E("바카라 결과", win?0x00FF88:0xFF4D4D)
+        .setDescription(`${change}원\n잔액 ${f(user.money)}원`)],
+      components:[]
+    });
+  }
+
+  // 가위바위보
   if(i.customId.startsWith("rps_")){
     const id = i.user.id;
     if(!game[id]) return;
 
-    const user = await getUser(id);
     const userC = i.customId.split("_")[1];
     const bot = rand(choices);
     const bet = game[id];
@@ -328,6 +363,15 @@ client.on("interactionCreate", async i=>{
         .setDescription(`${emojis[userC]} vs ${emojis[bot]}\n${change}원\n잔액 ${f(user.money)}원`)],
       components:[]
     });
+  }
+
+  // 문의 닫기
+  if(i.customId==="close"){
+    if(!i.member.permissions.has(PermissionsBitField.Flags.Administrator))
+      return i.reply({ content:"관리자만 가능", ephemeral:true });
+
+    await i.reply({ content:"삭제 중...", ephemeral:true });
+    setTimeout(()=>i.channel.delete(),2000);
   }
 });
 
