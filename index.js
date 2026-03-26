@@ -32,9 +32,9 @@ mongoose.connect(process.env.MONGO_URI)
 const E = (title) =>
   new EmbedBuilder()
     .setColor(0x111827)
-    .setAuthor({ name: "한국협회 데이터 센터" })
+    .setAuthor({ name: "한국협회" })
     .setTitle(`┏━━━ ${title} ━━━┓`)
-    .setFooter({ text: "한국협회 • 내부 보고 시스템" })
+    .setFooter({ text: "한국협회 • 시스템" })
     .setTimestamp();
 
 // ================== 스키마 ==================
@@ -115,6 +115,33 @@ client.on("messageCreate", async m => {
   stats.daily[day] = (stats.daily[day] || 0) + 1;
   await stats.save();
 
+  // 📖 도움말
+  if(cmd==="도움말"){
+    return m.reply({
+      embeds:[E("명령어 안내")
+        .setDescription(`
+💰 경제
+!잔액 / !돈줘 / !송금 @플레이어 금액
+
+🎰 게임
+!슬롯 금액 / !가위바위보 금액
+
+🏆 랭킹
+!랭킹
+
+📊 통계
+!통계
+
+⚠️ 경고 (관리자)
+!경고 / !경고확인 / !경고초기화
+
+📩 문의
+!문의 내용
+`)
+      ]
+    });
+  }
+
   // 💰 잔액
   if(cmd==="잔액"){
     return m.reply({
@@ -152,8 +179,11 @@ client.on("messageCreate", async m => {
     const target = m.mentions.users.first();
     const amount = parseInt(args[1]);
 
-    if(!target || !amount) return;
-    if(user.money < amount) return;
+    if(!target || !amount)
+      return m.reply({ embeds:[E("오류").setDescription("유저 및 금액 입력")] });
+
+    if(user.money < amount)
+      return m.reply({ embeds:[E("실패").setDescription("잔액 부족")] });
 
     const r = await getUser(target.id);
 
@@ -236,7 +266,7 @@ client.on("messageCreate", async m => {
     return m.reply({ embeds:[E("가위바위보").setDescription(`배팅: ${bet}원`)], components:[row] });
   }
 
-  // 🏆 돈 랭킹
+  // 🏆 랭킹
   if(cmd==="랭킹"){
     const top = await User.find().sort({ money:-1 }).limit(10);
 
@@ -256,26 +286,20 @@ client.on("messageCreate", async m => {
 
     const target = m.mentions.users.first();
     const reason = args.slice(2).join(" ");
-    if(!target || !reason) return;
+    if(!target || !reason)
+      return m.reply({ embeds:[E("오류").setDescription("유저 및 사유 입력")] });
 
     const t = await getUser(target.id);
     t.warns++;
     await t.save();
 
-    return m.reply({
-      embeds:[E("경고 부여")
-        .setDescription(`${target}\n사유: ${reason}\n누적: ${t.warns}회`)
-      ]
-    });
+    return m.reply({ embeds:[E("경고").setDescription(`${target}\n${reason}\n${t.warns}회`)] });
   }
 
   if(cmd==="경고확인"){
     const target = m.mentions.users.first() || m.author;
     const t = await getUser(target.id);
-
-    return m.reply({
-      embeds:[E("경고 조회").setDescription(`${target} → ${t.warns}회`)]
-    });
+    return m.reply({ embeds:[E("경고 조회").setDescription(`${target} → ${t.warns}회`)] });
   }
 
   if(cmd==="경고초기화"){
@@ -309,10 +333,15 @@ client.on("messageCreate", async m => {
     });
   }
 
-  // 📩 문의 (관리자만 삭제)
+  // 📩 문의 (핵심 수정 포함)
   if(cmd==="문의"){
     const text = args.slice(1).join(" ");
-    if(!text || tickets[id]) return;
+
+    if(!text)
+      return m.reply({ embeds:[E("오류").setDescription("문의 내용을 입력해주세요")] });
+
+    if(tickets[id])
+      return m.reply({ embeds:[E("오류").setDescription("이미 문의 진행 중")] });
 
     const channel = await m.guild.channels.create({
       name:`문의-${m.author.username}`,
@@ -343,7 +372,6 @@ client.on("messageCreate", async m => {
 client.on("interactionCreate", async i=>{
   if(!i.isButton()) return;
 
-  // 관리자만 티켓 삭제
   if(i.customId==="close_ticket"){
     if(!i.member.permissions.has(PermissionsBitField.Flags.Administrator))
       return i.reply({ content:"관리자만 가능", ephemeral:true });
@@ -352,7 +380,6 @@ client.on("interactionCreate", async i=>{
     setTimeout(()=>i.channel.delete(),2000);
   }
 
-  // 가위바위보
   if(i.customId.startsWith("rps_")){
     const id = i.user.id;
     if(!game[id]) return;
@@ -363,7 +390,6 @@ client.on("interactionCreate", async i=>{
     const bet = game[id];
 
     let change = 0;
-
     if((userC==="가위"&&bot==="보")||(userC==="바위"&&bot==="가위")||(userC==="보"&&bot==="바위")) change=bet;
     else if(userC!==bot) change=-bet;
 
@@ -372,9 +398,7 @@ client.on("interactionCreate", async i=>{
     delete game[id];
 
     return i.update({
-      embeds:[E("결과")
-        .setDescription(`${emojis[userC]} vs ${emojis[bot]}\n${change}원\n${f(user.money)}원`)
-      ],
+      embeds:[E("결과").setDescription(`${emojis[userC]} vs ${emojis[bot]}\n${change}원\n${f(user.money)}원`)],
       components:[]
     });
   }
