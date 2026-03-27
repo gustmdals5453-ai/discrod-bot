@@ -1,14 +1,15 @@
 module.exports = {
   name:"슬롯",
 
-  async execute(m,args,{user,E,G,f,rand}){
+  async execute(m,args,{user,E,G,f,rand,err}){
 
     const bet=Number(args[0]);
+
     if(isNaN(bet)||bet<=0)
-      return m.reply({embeds:[E("오류",0xFF4D4D)]});
+      return m.reply(err(E,"금액을 입력해주세요"));
 
     if(user.money<bet)
-      return m.reply({embeds:[E("잔액 부족",0xFF4D4D)]});
+      return m.reply(err(E,"잔액이 부족합니다"));
 
     const icons=["🍒","🍋","🍊","⭐","💎"];
 
@@ -35,9 +36,7 @@ module.exports = {
       change=bet*2;
       win=true;
     }
-    else{
-      change=-bet;
-    }
+    else change=-bet;
 
     user.money+=change;
     await user.save();
