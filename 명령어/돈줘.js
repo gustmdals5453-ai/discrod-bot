@@ -3,14 +3,20 @@ module.exports = {
 
   async execute(m, args, { user, E, err, f }) {
 
+    const 지급금액 = 10000;
+
     const now = new Date();
     const last = new Date(user.lastDaily);
 
-    if (now.toDateString() === last.toDateString())
+    // 🔥 날짜 비교 (자정 기준)
+    const today = now.toLocaleDateString();
+    const lastDay = last.toLocaleDateString();
+
+    if (today === lastDay)
       return m.reply(err(E, "하루 1회만 가능합니다"));
 
     user.lastDaily = Date.now();
-    user.money += 10000;
+    user.money += 지급금액;
 
     await user.save();
 
@@ -19,9 +25,9 @@ module.exports = {
         E("지급 완료").setDescription(
 `## 💰 일일 보상
 
-~~~diff
-+ 10,000원 지급
-~~~
+\`\`\`diff
++ ${f(지급금액)}원 지급
+\`\`\`
 
 ## 💳 현재 잔액
 ${f(user.money)}원`
