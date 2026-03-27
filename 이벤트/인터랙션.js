@@ -5,10 +5,90 @@ const { PermissionsBitField } = require("discord.js");
 module.exports = async (i) => {
   if (!i.isButton()) return;
 
+  // =========================
+  // 📘 도움말 버튼
+  // =========================
+  if (i.customId.startsWith("help_")) {
+
+    const type = i.customId.split("_")[1];
+
+    const data = {
+      경제:
+`## 경제
+
+\`\`\`diff
+!잔액
+- 현재 돈 확인
+
+!돈줘
+- 하루 1회 10,000원 지급
+
+!송금 @유저 금액
+- 유저에게 돈 전송
+\`\`\``,
+
+      도박:
+`## 도박
+
+\`\`\`diff
+!슬롯 금액
+- 슬롯 머신
+
+!블랙잭 금액
+- 블랙잭 게임
+
+!바카라 금액
+- 플레이어 / 뱅커 선택
+
+!가위바위보 금액
+- 봇과 승부
+\`\`\``,
+
+      관리:
+`## 관리
+
+\`\`\`diff
+!경고 @유저 사유
+- 경고 부여
+
+!경고확인
+- 경고 확인
+
+!경고초기화 @유저
+- 경고 초기화
+\`\`\``,
+
+      공지:
+`## 공지
+
+\`\`\`diff
+!공지 채널ID 내용
+- 공지 전송
+
+- on → @everyone 포함
+- off → 일반 공지
+\`\`\``
+    };
+
+    return i.update({
+      embeds: [
+        {
+          title: "봇 사용 안내",
+          description: data[type],
+          color: 0x2B2D31
+        }
+      ],
+      components: i.message.components // 🔥 버튼 유지
+    });
+  }
+
+  // =========================
+  // 🔥 유저 데이터
+  // =========================
   const user = await getUser(i.user.id);
 
-  // 🔥 다른 유저 클릭 방지
-  if (i.message.interaction && i.user.id !== i.message.interaction.user.id) {
+  // 🔥 버튼 소유자 체크 (안전하게)
+  if (i.message.interaction?.user?.id && i.user.id !== i.message.interaction.user.id) {
     return i.reply({
       content: "이 버튼은 본인만 사용할 수 있습니다",
       ephemeral: true
@@ -17,12 +97,22 @@ module.exports = async (i) => {
 
   await i.deferUpdate();
 
+  // =========================
   // 🎰 슬롯
+  // =========================
   if (i.customId.startsWith("slot_")) {
+
     const bet = Number(i.customId.split("_")[1]);
+    if (isNaN(bet) || bet <= 0) return;
+
+    if (user.money < bet) {
+      return i.editReply({
+        embeds:[G("오류", false).setDescription("잔액 부족")]
+      });
+    }
+
     const icons = ["🍒","🍋","🍊","⭐","💎"];
 
-    // 🔥 애니메이션
     for (let x = 0; x < 3; x++) {
       await new Promise(r => setTimeout(r, 500));
       await i.editReply({
@@ -77,10 +167,21 @@ ${change > 0 ? "+ 획득" : "- 손실"}: ${f(change)}원
     });
   }
 
+  // =========================
   // ✌️ 가위바위보
+  // =========================
   if (i.customId.startsWith("rps_")) {
+
     const [, betRaw, userC] = i.customId.split("_");
     const bet = Number(betRaw);
+
+    if (isNaN(bet) || bet <= 0) return;
+
+    if (user.money < bet) {
+      return i.editReply({
+        embeds:[G("오류", false).setDescription("잔액 부족")]
+      });
+    }
 
     const choices = ["가위","바위","보"];
     const emoji = {가위:"✌️",바위:"✊",보:"✋"};
@@ -105,7 +206,7 @@ ${change > 0 ? "+ 획득" : "- 손실"}: ${f(change)}원
     return i.editReply({
       embeds: [
         G("가위바위보 결과", win).setDescription(
-`## ✌️ 결과
+`## 결과
 
 \`\`\`diff
 ${emoji[userC]} vs ${emoji[bot]}
@@ -126,10 +227,21 @@ ${change > 0 ? "+" : ""}${f(change)}원
     });
   }
 
+  // =========================
   // 🎲 바카라 / 블랙잭
+  // =========================
   if (i.customId.startsWith("game_")) {
+
     const [_, type, betRaw] = i.customId.split("_");
     const bet = Number(betRaw);
+
+    if (isNaN(bet) || bet <= 0) return;
+
+    if (user.money < bet) {
+      return i.editReply({
+        embeds:[G("오류", false).setDescription("잔액 부족")]
+      });
+    }
 
     await new Promise(r => setTimeout(r, 1000));
 
@@ -142,7 +254,7 @@ ${change > 0 ? "+" : ""}${f(change)}원
     return i.editReply({
       embeds: [
         G("게임 결과", win).setDescription(
-`## 🎲 ${type}
+`## ${type}
 
 \`\`\`diff
 ${win ? "+ 승리!" : "- 패배"}
@@ -159,7 +271,9 @@ ${change > 0 ? "+" : ""}${f(change)}원
     });
   }
 
+  // =========================
   // 🎫 티켓 닫기
+  // =========================
   if (i.customId === "close_ticket") {
 
     if (!i.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
