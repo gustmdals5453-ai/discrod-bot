@@ -19,24 +19,23 @@ module.exports = {
     if (!ch || ch.type !== ChannelType.GuildText)
       return m.reply(err(E, "텍스트 채널만 가능"));
 
-    // 🔥 ON/OFF 물어보기
+    // 🔥 설정 안내
     await m.reply({
       embeds: [
         E("공지 설정").setDescription(
 `## 📢 에브리원 설정
 
-~~~diff
-# on = @everyone 포함
+\`\`\`diff
+# on  = @everyone 포함
 # off = 일반 공지
-~~~
+\`\`\`
 
-## 👉 on / off 입력`
+## 👉 on / off 입력 (15초)`
         )
       ]
     });
 
     try {
-      // 🔥 메시지 기다림
       const filter = msg => msg.author.id === m.author.id;
 
       const collected = await m.channel.awaitMessages({
@@ -46,7 +45,7 @@ module.exports = {
         errors: ["time"]
       });
 
-      const 답 = collected.first().content.toLowerCase();
+      const 답 = collected.first().content.trim().toLowerCase();
 
       let mention = "";
 
@@ -61,19 +60,21 @@ module.exports = {
           E("공지").setDescription(
 `## 📢 공지
 
-~~~diff
+\`\`\`diff
 ${내용}
-~~~`
+\`\`\``
           )
         ]
       });
 
       return m.reply({
         embeds: [
-          E("완료").setDescription(
-`~~~diff
+          E("공지 완료").setDescription(
+`## ✅ 완료
+
+\`\`\`diff
 + 공지가 전송되었습니다
-~~~`
+\`\`\``
           )
         ]
       });
