@@ -14,7 +14,7 @@ module.exports = {
     return m.reply({
       embeds: [
         E("경고 확인", 0xFEE75C).setDescription(
-`##  경고 정보
+`## ⚠️경고 정보
 
 ##  대상
 <@${대상.id}>
