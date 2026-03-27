@@ -1,32 +1,86 @@
+const { ChannelType, PermissionsBitField } = require("discord.js");
+
 module.exports = {
-  name:"공지",
+  name: "공지",
 
-  async execute(m,args,{E,err}){
+  async execute(m, args, { E, err }) {
 
-    if(!m.member.permissions.has("Administrator"))
-      return m.reply(err(E,"관리자만 사용 가능합니다"));
+    if (!m.member.permissions.has(PermissionsBitField.Flags.Administrator))
+      return m.reply(err(E, "관리자만 사용 가능"));
 
-    const 채널ID=args[0];
-    const 에브=args[1];
-    const 내용=args.slice(2).join(" ");
+    const 채널ID = args[0];
+    const 내용 = args.slice(1).join(" ");
 
-    if(!채널ID)
-      return m.reply(err(E,"채널 ID를 입력해주세요"));
+    if (!채널ID || !내용)
+      return m.reply(err(E, "형식: !공지 채널ID 내용"));
 
-    if(에브!=="on"&&에브!=="off")
-      return m.reply(err(E,"everyone 여부는 on / off 로 입력"));
+    const ch = m.guild.channels.cache.get(채널ID);
 
-    if(!내용)
-      return m.reply(err(E,"공지 내용을 입력해주세요"));
+    if (!ch || ch.type !== ChannelType.GuildText)
+      return m.reply(err(E, "텍스트 채널만 가능"));
 
-    const ch=m.guild.channels.cache.get(채널ID);
+    // 🔥 ON/OFF 물어보기
+    await m.reply({
+      embeds: [
+        E("공지 설정").setDescription(
+`## 📢 에브리원 설정
 
-    if(!ch)
-      return m.reply(err(E,"채널을 찾을 수 없습니다"));
+~~~diff
+# on = @everyone 포함
+# off = 일반 공지
+~~~
 
-    return ch.send({
-      content: 에브==="on" ? "@everyone" : "",
-      embeds:[E("공지",0xFF3CAC).setDescription(내용)]
+## 👉 on / off 입력`
+        )
+      ]
     });
+
+    try {
+      // 🔥 메시지 기다림
+      const filter = msg => msg.author.id === m.author.id;
+
+      const collected = await m.channel.awaitMessages({
+        filter,
+        max: 1,
+        time: 15000,
+        errors: ["time"]
+      });
+
+      const 답 = collected.first().content.toLowerCase();
+
+      let mention = "";
+
+      if (답 === "on") mention = "@everyone";
+      else if (답 === "off") mention = "";
+      else return m.reply(err(E, "on 또는 off만 입력"));
+
+      // 🔥 공지 전송
+      await ch.send({
+        content: mention,
+        embeds: [
+          E("공지").setDescription(
+`## 📢 공지
+
+~~~diff
+${내용}
+~~~`
+          )
+        ]
+      });
+
+      return m.reply({
+        embeds: [
+          E("완료").setDescription(
+`~~~diff
++ 공지가 전송되었습니다
+~~~`
+          )
+        ]
+      });
+
+    } catch {
+      return m.reply(err(E, "시간 초과 (15초)"));
+    }
+
   }
 };
