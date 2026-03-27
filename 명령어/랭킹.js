@@ -11,7 +11,7 @@ module.exports = {
       return m.reply({
         embeds:[
           E("랭킹").setDescription(
-`## 📊 랭킹
+`## 랭킹
 
 \`\`\`diff
 - 데이터가 없습니다
@@ -21,13 +21,14 @@ module.exports = {
       });
 
     const 리스트 = top
-      .map((u,i)=> `# ${i+1}위 <@${u.userId}> - ${f(u.money)}원`)
+      .map((u,i)=> `# ${i+1}위 <@!${u.userId}> - ${f(u.money)}원`)
       .join("\n");
 
     return m.reply({
+      allowedMentions: { parse: ["users"] },
       embeds:[
         E("랭킹").setDescription(
-`## 💰 TOP 10 랭킹
+`## TOP 10 랭킹
 
 \`\`\`diff
 ${리스트}
