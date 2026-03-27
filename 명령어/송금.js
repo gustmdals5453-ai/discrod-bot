@@ -30,17 +30,17 @@ module.exports = {
 
     return m.reply({
       embeds: [
-        E("송금 완료").setDescription(
-`## 💸 송금 완료
+       E("송금 완료").setDescription(
+`##  송금 완료
 
 \`\`\`diff
 + ${f(금액)}원 전송 완료
 \`\`\`
 
-## 👤 대상
+##  대상
 <@${대상.id}>
 
-## 💰 현재 잔액
+##  현재 잔액
 ${f(user.money)}원`
         )
       ]
