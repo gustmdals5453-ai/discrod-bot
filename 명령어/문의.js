@@ -3,11 +3,11 @@ const { ChannelType, PermissionsBitField } = require("discord.js");
 module.exports = {
   name:"문의",
 
-  async execute(m,args,{E}){
+  async execute(m,args,{E,err}){
 
     const 내용=args.join(" ");
     if(!내용)
-      return m.reply({embeds:[E("오류",0xFF4D4D)]});
+      return m.reply(err(E,"문의 내용을 입력해주세요"));
 
     const ch=await m.guild.channels.create({
       name:`문의-${m.author.username}`,
