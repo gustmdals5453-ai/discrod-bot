@@ -1,19 +1,19 @@
 module.exports = {
   name:"송금",
 
-  async execute(m,args,{user,getUser,E,f}){
+  async execute(m,args,{user,getUser,E,f,err}){
 
     const 대상=m.mentions.users.first();
     const 금액=Number(args.find(a=>!isNaN(a)));
 
     if(!대상||isNaN(금액)||금액<=0)
-      return m.reply({embeds:[E("오류",0xFF4D4D).setDescription("형식: !송금 @유저 금액")]});
+      return m.reply(err(E,"형식: !송금 @유저 금액"));
 
     if(대상.id===m.author.id)
-      return m.reply({embeds:[E("오류",0xFF4D4D).setDescription("자기 자신 송금 불가")]});
+      return m.reply(err(E,"자기 자신에게는 송금할 수 없음"));
 
     if(user.money<금액)
-      return m.reply({embeds:[E("잔액 부족",0xFF4D4D)]});
+      return m.reply(err(E,"잔액이 부족합니다"));
 
     const u=await getUser(대상.id);
 
