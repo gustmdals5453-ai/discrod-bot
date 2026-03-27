@@ -16,7 +16,7 @@ module.exports = {
     return m.reply({
       embeds:[
         E("블랙잭").setDescription(
-`## 🃏 블랙잭
+`##  블랙잭
 
 \`\`\`diff
 + 배팅 금액: ${f(bet)}원
