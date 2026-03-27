@@ -1,18 +1,24 @@
 const { getUser, f, rand, err } = require("../유틸/함수");
 const { E, G } = require("../유틸/임베드");
 
-const prefix="!";
+const prefix = "!";
 
-module.exports = async(client,m)=>{
-  if(m.author.bot||!m.content.startsWith(prefix)) return;
+module.exports = async (m) => {
 
-  const args=m.content.slice(prefix.length).trim().split(/ +/);
-  const cmd=args[0];
+  if (m.author.bot) return;
+  if (!m.content.startsWith(prefix)) return;
 
-  const command=client.commands.get(cmd);
-  if(!command) return;
+  const args = m.content.slice(prefix.length).trim().split(/ +/);
+  const cmd = args.shift(); // 🔥 핵심
 
-  const user=await getUser(m.author.id);
+  const command = m.client.commands.get(cmd);
+  if (!command) return;
 
-  command.execute(m,args,{user,getUser,E,G,f,rand,err});
+  const user = await getUser(m.author.id);
+
+  try {
+    command.execute(m, args, { user, getUser, E, G, f, rand, err });
+  } catch (e) {
+    console.error(e);
+  }
 };
