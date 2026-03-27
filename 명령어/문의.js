@@ -1,4 +1,4 @@
-const { ChannelType, PermissionsBitField } = require("discord.js");
+const { ChannelType, PermissionsBitField, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 
 module.exports = {
   name:"문의",
@@ -19,6 +19,16 @@ module.exports = {
       ]
     });
 
-    return ch.send({embeds:[E("문의").setDescription(내용)]});
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+      .setCustomId("close_ticket")
+      .setLabel("문의 닫기")
+      .setStyle(ButtonStyle.Danger)
+    );
+
+    return ch.send({
+      embeds:[E("문의").setDescription(내용)],
+      components:[row]
+    });
   }
 };
