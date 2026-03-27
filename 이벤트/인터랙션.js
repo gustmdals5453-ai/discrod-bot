@@ -1,5 +1,6 @@
 const { getUser, f, rand } = require("../유틸/함수");
 const { G } = require("../유틸/임베드");
+const { PermissionsBitField } = require("discord.js");
 
 module.exports = async (i) => {
   if (!i.isButton()) return;
@@ -18,16 +19,19 @@ module.exports = async (i) => {
 
   // 🎰 슬롯
   if (i.customId.startsWith("slot_")) {
-    const bet = parseInt(i.customId.split("_")[1]);
+    const bet = Number(i.customId.split("_")[1]);
     const icons = ["🍒","🍋","🍊","⭐","💎"];
 
+    // 🔥 애니메이션
     for (let x = 0; x < 3; x++) {
       await new Promise(r => setTimeout(r, 500));
       await i.editReply({
         embeds: [G("슬롯", true).setDescription(
-`~~~diff
+`## 🎰 슬롯 머신
+
+\`\`\`diff
 # ${rand(icons)} ${rand(icons)} ${rand(icons)}
-~~~`
+\`\`\``
         )],
         components: []
       });
@@ -54,15 +58,19 @@ module.exports = async (i) => {
     return i.editReply({
       embeds: [
         G("슬롯 결과", win).setDescription(
-`~~~diff
-# 🎰 슬롯 결과
-${win ? "+ 당첨" : "- 실패"}
+`## 🎰 슬롯 결과
 
-# ${r1} ${r2} ${r3}
+\`\`\`diff
+${win ? "+ 당첨!" : "- 실패"}
+\`\`\`
 
+## ${r1} ${r2} ${r3}
+
+\`\`\`diff
 ${change > 0 ? "+ 획득" : "- 손실"}: ${f(change)}원
-# 잔액: ${f(user.money)}원
-~~~`
+\`\`\`
+
+## 💰 잔액 ${f(user.money)}원`
         )
       ],
       components: []
@@ -71,7 +79,8 @@ ${change > 0 ? "+ 획득" : "- 손실"}: ${f(change)}원
 
   // ✌️ 가위바위보
   if (i.customId.startsWith("rps_")) {
-    const [, bet, userC] = i.customId.split("_");
+    const [, betRaw, userC] = i.customId.split("_");
+    const bet = Number(betRaw);
 
     const choices = ["가위","바위","보"];
     const emoji = {가위:"✌️",바위:"✊",보:"✋"};
@@ -96,15 +105,21 @@ ${change > 0 ? "+ 획득" : "- 손실"}: ${f(change)}원
     return i.editReply({
       embeds: [
         G("가위바위보 결과", win).setDescription(
-`~~~diff
-# 결과
+`## ✌️ 결과
+
+\`\`\`diff
 ${emoji[userC]} vs ${emoji[bot]}
+\`\`\`
 
+\`\`\`diff
 ${change > 0 ? "+ 승리" : change < 0 ? "- 패배" : "# 무승부"}
+\`\`\`
 
-${change > 0 ? "+ " : "- "}${f(change)}원
-# 잔액: ${f(user.money)}원
-~~~`
+\`\`\`diff
+${change > 0 ? "+" : ""}${f(change)}원
+\`\`\`
+
+## 💰 잔액 ${f(user.money)}원`
         )
       ],
       components: []
@@ -113,7 +128,8 @@ ${change > 0 ? "+ " : "- "}${f(change)}원
 
   // 🎲 바카라 / 블랙잭
   if (i.customId.startsWith("game_")) {
-    const [_, type, bet] = i.customId.split("_");
+    const [_, type, betRaw] = i.customId.split("_");
+    const bet = Number(betRaw);
 
     await new Promise(r => setTimeout(r, 1000));
 
@@ -126,13 +142,17 @@ ${change > 0 ? "+ " : "- "}${f(change)}원
     return i.editReply({
       embeds: [
         G("게임 결과", win).setDescription(
-`~~~diff
-# 결과
-${win ? "+ 승리" : "- 패배"}
+`## 🎲 ${type}
 
-${change > 0 ? "+ " : "- "}${f(change)}원
-# 잔액: ${f(user.money)}원
-~~~`
+\`\`\`diff
+${win ? "+ 승리!" : "- 패배"}
+\`\`\`
+
+\`\`\`diff
+${change > 0 ? "+" : ""}${f(change)}원
+\`\`\`
+
+## 💰 잔액 ${f(user.money)}원`
         )
       ],
       components: []
@@ -141,11 +161,19 @@ ${change > 0 ? "+ " : "- "}${f(change)}원
 
   // 🎫 티켓 닫기
   if (i.customId === "close_ticket") {
-    if (!i.member.permissions.has("Administrator")) {
-      return i.followUp({ content: "관리자만 가능", ephemeral: true });
+
+    if (!i.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
+      return i.followUp({
+        content: "관리자만 가능합니다",
+        ephemeral: true
+      });
     }
 
-    await i.followUp({ content: "삭제중...", ephemeral: true });
+    await i.followUp({
+      content: "티켓 삭제중...",
+      ephemeral: true
+    });
+
     setTimeout(() => i.channel.delete(), 1500);
   }
 };
