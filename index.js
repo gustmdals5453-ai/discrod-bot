@@ -151,22 +151,35 @@ await user.save();
 return m.reply({embeds:[E("지급").setDescription(`+10,000원\n잔액 ${f(user.money)}원`)]});
 }
 
-// 송금
-if(cmd==="송금"){
-const t=m.mentions.users.first();
-const amt=Number(args[1]);
+if(cmd === "송금"){
+  const t = m.mentions.users.first();
+  const amt = Number(args[1]);
 
-if(!t||isNaN(amt))
-return m.reply({embeds:[E("오류",0xFF4D4D).setDescription("형식: !송금 @유저 금액")]});
+  if(!t || isNaN(amt) || amt <= 0)
+    return m.reply({embeds:[E("오류",0xFF4D4D).setDescription("형식: !송금 @유저 금액")]});
 
-if(user.money<amt)
-return m.reply({embeds:[E("잔액 부족",0xFF4D4D)]});
+  if(!user)
+    return m.reply("유저 데이터 없음");
 
-const u=await getUser(t.id);
-user.money-=amt; u.money+=amt;
-await user.save(); await u.save();
+  if(user.money < amt)
+    return m.reply({embeds:[E("잔액 부족",0xFF4D4D)]});
 
-return m.reply({embeds:[E("송금 완료").setDescription(`${t} ${amt}원\n잔액 ${f(user.money)}원`)]});
+  const u = await getUser(t.id);
+  if(!u)
+    return m.reply("대상 유저 데이터 없음");
+
+  user.money -= amt;
+  u.money += amt;
+
+  await user.save();
+  await u.save();
+
+  return m.reply({
+    embeds:[
+      E("송금 완료")
+      .setDescription(`${t} ${amt}원\n잔액 ${f(user.money)}원`)
+    ]
+  });
 }
 
 // 경고
