@@ -1,23 +1,32 @@
 const { ChannelType, PermissionsBitField, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 
+const tickets = {};
+
 module.exports = {
   name:"문의",
 
   async execute(m,args,{E,err}){
 
     const 내용=args.join(" ");
+
     if(!내용)
       return m.reply(err(E,"문의 내용을 입력해주세요"));
+
+    // 🔥 중복 문의 방지
+    if(tickets[m.author.id])
+      return m.reply(err(E,"이미 문의가 진행중입니다"));
 
     const ch=await m.guild.channels.create({
       name:`문의-${m.author.username}`,
       type:ChannelType.GuildText,
       permissionOverwrites:[
         {id:m.guild.id,deny:[PermissionsBitField.Flags.ViewChannel]},
-        {id:m.author.id,allow:[PermissionsBitField.Flags.ViewChannel]},
+        {id:m.author.id,allow:[PermissionsBitField.Flags.ViewChannel,PermissionsBitField.Flags.SendMessages]},
         {id:m.guild.ownerId,allow:[PermissionsBitField.Flags.ViewChannel]}
       ]
     });
+
+    tickets[m.author.id]=ch.id;
 
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
@@ -26,9 +35,13 @@ module.exports = {
       .setStyle(ButtonStyle.Danger)
     );
 
-    return ch.send({
+    await ch.send({
       embeds:[E("문의").setDescription(내용)],
       components:[row]
+    });
+
+    return m.reply({
+      embeds:[E("생성 완료").setDescription("문의 채널이 생성되었습니다")]
     });
   }
 };
