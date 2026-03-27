@@ -1,17 +1,19 @@
 const { EmbedBuilder } = require("discord.js");
 
-exports.E = (t,c=0x00E5FF)=>
-new EmbedBuilder()
-.setColor(c)
-.setAuthor({name:"한국협회"})
-.setTitle(`┏━━━ ${t} ━━━┓`)
-.setFooter({text:"한국협회 시스템"})
-.setTimestamp();
+// 🔷 기본 (깔끔형)
+exports.E = (title, color = 0x5865F2) => {
+  return new EmbedBuilder()
+    .setColor(color)
+    .setTitle(title)
+    .setFooter({ text: "한국협회" })
+    .setTimestamp();
+};
 
-exports.G = (t,win)=>
-new EmbedBuilder()
-.setColor(win?0x00FF88:0xFF4D4D)
-.setAuthor({name:"한국협회 카지노"})
-.setTitle(`┏━━━ ${t} ━━━┓`)
-.setFooter({text:"카지노"})
-.setTimestamp();
+// 🎰 도박 전용 (승패 색상)
+exports.G = (title, win = true) => {
+  return new EmbedBuilder()
+    .setColor(win ? 0x57F287 : 0xED4245)
+    .setTitle(title)
+    .setFooter({ text: win ? "WIN" : "LOSE" })
+    .setTimestamp();
+};
