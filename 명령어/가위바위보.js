@@ -5,21 +5,21 @@ module.exports = {
 
   async execute(m,args,{user,E,err}){
 
-    const bet=Number(args[0]);
+    const bet = Number(args[0]);
 
-    if(isNaN(bet)||bet<=0)
-      return m.reply(err(E,"금액을 입력해주세요"));
+    if(isNaN(bet) || bet <= 0)
+      return m.reply(err(E,"금액 입력"));
 
-    if(user.money<bet)
-      return m.reply(err(E,"잔액이 부족합니다"));
+    if(user.money < bet)
+      return m.reply(err(E,"잔액 부족"));
 
     return m.reply({
-      embeds:[E("가위바위보").setDescription(`배팅 ${bet}원`)],
+      embeds:[E("가위바위보").setDescription(`\`\`\`\n배팅: ${bet}원\n\`\`\``)],
       components:[
         new ActionRowBuilder().addComponents(
-          new ButtonBuilder().setCustomId(`rps_${bet}_가위`).setLabel("✌️").setStyle(ButtonStyle.Primary),
-          new ButtonBuilder().setCustomId(`rps_${bet}_바위`).setLabel("✊").setStyle(ButtonStyle.Primary),
-          new ButtonBuilder().setCustomId(`rps_${bet}_보`).setLabel("✋").setStyle(ButtonStyle.Primary)
+          new ButtonBuilder().setCustomId(`rps_${bet}_가위`).setLabel("가위").setStyle(ButtonStyle.Primary),
+          new ButtonBuilder().setCustomId(`rps_${bet}_바위`).setLabel("바위").setStyle(ButtonStyle.Primary),
+          new ButtonBuilder().setCustomId(`rps_${bet}_보`).setLabel("보").setStyle(ButtonStyle.Primary)
         )
       ]
     });
