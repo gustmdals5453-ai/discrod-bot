@@ -8,13 +8,18 @@ module.exports = {
     const bet = Number(args[0]);
 
     if(isNaN(bet) || bet <= 0)
-      return m.reply(err(E,"금액을 입력해주세요"));
+      return m.reply(err(E,"금액 입력"));
 
     if(user.money < bet)
       return m.reply(err(E,"잔액 부족"));
 
     return m.reply({
-      embeds:[E("슬롯").setDescription(`\`\`\`\n배팅: ${bet}원\n\`\`\``)],
+      embeds:[E("슬롯").setDescription(
+`~~~diff
+# 슬롯 머신
++ 배팅: ${bet}원
+~~~`
+      )],
       components:[
         new ActionRowBuilder().addComponents(
           new ButtonBuilder()
