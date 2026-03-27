@@ -1,16 +1,16 @@
 module.exports = {
   name:"경고",
 
-  async execute(m,args,{getUser,E}){
+  async execute(m,args,{getUser,E,err}){
 
     if(!m.member.permissions.has("Administrator"))
-      return m.reply({embeds:[E("오류",0xFF4D4D)]});
+      return m.reply(err(E,"관리자만 사용 가능합니다"));
 
     const 대상=m.mentions.users.first();
     const 사유=args.slice(1).join(" ");
 
     if(!대상||!사유)
-      return m.reply({embeds:[E("오류",0xFF4D4D).setDescription("형식: !경고 @유저 사유")]});
+      return m.reply(err(E,"형식: !경고 @유저 사유"));
 
     const u=await getUser(대상.id);
 
