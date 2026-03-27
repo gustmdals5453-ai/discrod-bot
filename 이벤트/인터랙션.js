@@ -1,19 +1,18 @@
 const { getUser, f, rand } = require("../유틸/함수");
 const { G } = require("../유틸/임베드");
 
-const game = {};
-
-module.exports = async (client, i) => {
+module.exports = async (i) => {
   if (!i.isButton()) return;
 
   const user = await getUser(i.user.id);
+
+  // 🔥 무조건 먼저 실행 (이게 핵심)
+  await i.deferUpdate();
 
   // 슬롯
   if (i.customId.startsWith("slot_")) {
     const bet = parseInt(i.customId.split("_")[1]);
     const icons = ["🍒","🍋","🍊","⭐","💎"];
-
-    await i.update({ embeds:[G("슬롯",true).setDescription("🎰 돌리는 중...")], components:[] });
 
     for(let x=0;x<3;x++){
       await new Promise(r=>setTimeout(r,600));
@@ -44,13 +43,13 @@ module.exports = async (client, i) => {
   // 가위바위보
   if(i.customId.startsWith("rps_")){
     const bet=parseInt(i.customId.split("_")[1]);
+    const userC=i.customId.split("_")[2];
+
     const choices=["가위","바위","보"];
     const emoji={가위:"✌️",바위:"✊",보:"✋"};
 
-    await i.update({embeds:[G("가위바위보",true).setDescription("🤔 선택 중...")],components:[]});
     await new Promise(r=>setTimeout(r,800));
 
-    const userC=i.customId.split("_")[2];
     const bot=rand(choices);
 
     let change=0;
@@ -71,11 +70,10 @@ module.exports = async (client, i) => {
     });
   }
 
-  // 블랙잭 / 바카라 공통
+  // 블랙잭 / 바카라
   if(i.customId.startsWith("game_")){
     const [_, type, bet] = i.customId.split("_");
 
-    await i.update({embeds:[G(type,true).setDescription("진행 중...")],components:[]});
     await new Promise(r=>setTimeout(r,1000));
 
     const win=Math.random()>0.5;
@@ -88,5 +86,14 @@ module.exports = async (client, i) => {
       embeds:[G("결과",win)
       .setDescription(`${change>0?"+":""}${f(change)}원\n잔액 ${f(user.money)}원`)]
     });
+  }
+
+  // 🔥 티켓 닫기 버튼 추가
+  if(i.customId === "close_ticket"){
+    if(!i.member.permissions.has("Administrator"))
+      return i.followUp({content:"관리자만 가능",ephemeral:true});
+
+    await i.followUp({content:"채널 삭제중...",ephemeral:true});
+    setTimeout(()=>i.channel.delete(),1500);
   }
 };
