@@ -23,13 +23,13 @@ module.exports = {
     return m.reply({
       embeds: [
         E("지급 완료").setDescription(
-`## 💰 일일 보상
+`##  일일 보상
 
 \`\`\`diff
 + ${f(지급금액)}원 지급
 \`\`\`
 
-## 💳 현재 잔액
+##  현재 잔액
 ${f(user.money)}원`
         )
       ]
