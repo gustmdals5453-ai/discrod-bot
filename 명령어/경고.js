@@ -30,7 +30,7 @@ module.exports = {
     return m.reply({
       embeds: [
         E("경고 부여", 0xFEE75C).setDescription(
-`## ⚠️ 경고 부여
+`## ⚠️경고 부여
 
 \`\`\`diff
 ! 경고가 추가되었습니다
