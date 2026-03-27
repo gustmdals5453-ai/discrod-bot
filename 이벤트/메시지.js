@@ -1,4 +1,4 @@
-const { getUser, f } = require("../유틸/함수");
+const { getUser, f, rand, err } = require("../유틸/함수");
 const { E, G } = require("../유틸/임베드");
 
 const prefix="!";
@@ -14,5 +14,5 @@ module.exports = async(client,m)=>{
 
   const user=await getUser(m.author.id);
 
-  command.execute(m,args,{user,getUser,E,G,f});
+  command.execute(m,args,{user,getUser,E,G,f,rand,err});
 };
