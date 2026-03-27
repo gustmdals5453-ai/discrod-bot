@@ -9,6 +9,6 @@ exports.getUser = async(id)=>{
 exports.f = (n)=>n.toLocaleString();
 exports.rand = (a)=>a[Math.floor(Math.random()*a.length)];
 
-exports.err = (E, msg) => {
-  return { embeds: [E("오류", 0xFF4D4D).setDescription(msg)] };
+exports.err = (E,msg)=>{
+  return { embeds:[E("오류",0xFF4D4D).setDescription(msg)] };
 };
