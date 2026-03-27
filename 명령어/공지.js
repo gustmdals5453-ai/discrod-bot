@@ -53,7 +53,7 @@ module.exports = {
       else if (답 === "off") mention = "";
       else return m.reply(err(E, "on 또는 off만 입력"));
 
-      // 🔥 공지 전송
+      //  공지 전송
       await ch.send({
         content: mention,
         embeds: [
