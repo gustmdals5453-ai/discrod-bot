@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits } = require("discord.js");
+const { Client, GatewayIntentBits, Partials } = require("discord.js");
 const mongoose = require("mongoose");
 const http = require("http");
 
@@ -7,28 +7,41 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildMembers
-  ]
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.DirectMessages // 🔥 DM 받기 필수
+  ],
+  partials: ["CHANNEL"] // 🔥 DM 대응 필수
 });
 
-// 렌더 유지용
+// 🔥 렌더 유지용 웹서버
 http.createServer((req,res)=>{
   res.writeHead(200);
   res.end("Bot running");
 }).listen(process.env.PORT || 3000);
 
-// DB 연결
+// 🔥 DB 연결
 mongoose.connect(process.env.MONGO_URI)
 .then(()=>console.log("DB 연결됨"))
-.catch(console.error);
+.catch(err=>{
+  console.error("DB 오류:", err);
+  process.exit(1);
+});
 
-// 명령어 로드
+// 🔥 명령어 로드
 require("./핸들러/명령어로더")(client);
 
-// 이벤트
+// 🔥 이벤트 등록
 client.on("messageCreate", require("./이벤트/메시지"));
-client.on("interactionCreate", require("./이벤트/인터랙션")); // 🔥 이거 추가
+client.on("interactionCreate", require("./이벤트/인터랙션"));
 
-client.once("ready", ()=>console.log("봇 준비됨"));
+// 🔥 준비 완료
+client.once("ready", ()=>{
+  console.log(`봇 로그인됨: ${client.user.tag}`);
+});
 
+// 🔥 에러 방지 (중요)
+process.on("unhandledRejection", console.error);
+process.on("uncaughtException", console.error);
+
+// 🔥 로그인
 client.login(process.env.TOKEN);
