@@ -8,16 +8,16 @@ module.exports = (client)=>{
     const files = fs.readdirSync(dir);
 
     for(const file of files){
-      const full = path.join(dir,file);
+      const fullPath = path.join(dir, file);
 
-      if(fs.statSync(full).isDirectory()) {
-        불러오기(full);
+      if(fs.statSync(fullPath).isDirectory()){
+        불러오기(fullPath);
       } else {
-        const cmd = require(full);
+        const cmd = require(path.resolve(fullPath)); // 🔥 핵심
         client.commands.set(cmd.name, cmd);
       }
     }
   };
 
-  불러오기("./명령어");
+  불러오기("./명령어"); // 🔥 중요
 };
