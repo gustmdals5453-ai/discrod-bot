@@ -14,16 +14,16 @@ module.exports = {
     return m.reply({
       embeds: [
         E("경고 확인", 0xFEE75C).setDescription(
-`## ⚠️ 경고 정보
+`##  경고 정보
 
-## 👤 대상
+##  대상
 <@${대상.id}>
 
 \`\`\`diff
 ! 누적 경고: ${u.warns}회
 \`\`\`
 
-## 📄 사유 목록
+##  사유 목록
 ${사유목록}`
         )
       ]
