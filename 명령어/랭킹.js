@@ -10,9 +10,7 @@ module.exports = {
     return m.reply({
       embeds:[
         E("랭킹")
-        .setDescription(
-          top.map((u,i)=>`${i+1}위 <@${u.userId}> ${f(u.money)}원`).join("\n")
-        )
+        .setDescription(top.map((u,i)=>`${i+1}위 <@${u.userId}> ${f(u.money)}원`).join("\n"))
       ]
     });
   }
