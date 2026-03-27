@@ -1,24 +1,18 @@
-const { 유저가져오기, 숫자 } = require("../유틸/함수");
-const { 기본, 카지노 } = require("../유틸/임베드");
+const { getUser, f } = require("../유틸/함수");
+const { E, G } = require("../유틸/임베드");
 
-const prefix = "!";
+const prefix="!";
 
-module.exports = async (client, m) => {
-  if (m.author.bot || !m.content.startsWith(prefix)) return;
+module.exports = async(client,m)=>{
+  if(m.author.bot||!m.content.startsWith(prefix)) return;
 
-  const args = m.content.slice(prefix.length).trim().split(/ +/);
-  const cmd = args[0];
+  const args=m.content.slice(prefix.length).trim().split(/ +/);
+  const cmd=args[0];
 
-  const 명령어 = client.commands.get(cmd);
-  if (!명령어) return;
+  const command=client.commands.get(cmd);
+  if(!command) return;
 
-  const user = await 유저가져오기(m.author.id);
+  const user=await getUser(m.author.id);
 
-  명령어.execute(m, args, {
-    user,
-    유저가져오기,
-    기본,
-    카지노,
-    숫자
-  });
+  command.execute(m,args,{user,getUser,E,G,f});
 };
