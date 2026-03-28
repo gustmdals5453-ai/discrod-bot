@@ -27,9 +27,20 @@ module.exports = {
       ],
       components:[
         new ActionRowBuilder().addComponents(
-          new ButtonBuilder().setCustomId(`rps_${bet}_가위`).setLabel("가위").setStyle(ButtonStyle.Primary),
-          new ButtonBuilder().setCustomId(`rps_${bet}_바위`).setLabel("바위").setStyle(ButtonStyle.Primary),
-          new ButtonBuilder().setCustomId(`rps_${bet}_보`).setLabel("보").setStyle(ButtonStyle.Primary)
+          new ButtonBuilder()
+            .setCustomId(`rps_${bet}_${m.author.id}_가위`)
+            .setLabel("가위")
+            .setStyle(ButtonStyle.Primary),
+
+          new ButtonBuilder()
+            .setCustomId(`rps_${bet}_${m.author.id}_바위`)
+            .setLabel("바위")
+            .setStyle(ButtonStyle.Primary),
+
+          new ButtonBuilder()
+            .setCustomId(`rps_${bet}_${m.author.id}_보`)
+            .setLabel("보")
+            .setStyle(ButtonStyle.Primary)
         )
       ]
     });
