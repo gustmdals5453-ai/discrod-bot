@@ -4,7 +4,7 @@ const ADMINS = [
 ];
 
 // 🔥 DM 안될 때 보낼 채널 ID 넣어라
-const LOG_CHANNEL_ID = "여기에채널ID";
+const LOG_CHANNEL_ID = "1487463833437081700";
 
 const sessions = {};
 
