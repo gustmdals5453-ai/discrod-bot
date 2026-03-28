@@ -32,7 +32,7 @@ require("./핸들러/명령어로더")(client);
 
 // 이벤트 등록
 client.on("messageCreate", require("./이벤트/메시지"));
-client.on("messageCreate", require("./이벤트/신고")); // 🔥 추가됨
+client.on("messageCreate", require("./이벤트/메시지")); // 🔥 추가됨
 client.on("interactionCreate", require("./이벤트/인터랙션"));
 
 // 준비 완료
