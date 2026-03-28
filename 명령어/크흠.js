@@ -13,7 +13,7 @@ module.exports = {
         E("확인").setDescription(
 `~~~diff
 + 확인ㅋㅋ
-~~~`
+\`\`\`
         )
       ]
     });
