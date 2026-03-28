@@ -10,7 +10,7 @@ const client = new Client({
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.DirectMessages
   ],
-  partials: [Partials.Channel] // DM 대응
+  partials: [Partials.Channel]
 });
 
 // 렌더 유지용
@@ -30,12 +30,10 @@ mongoose.connect(process.env.MONGO_URI)
 // 명령어 로드
 require("./핸들러/명령어로더")(client);
 
-// 이벤트 등록
+// ✅ 이벤트 하나만
 client.on("messageCreate", require("./이벤트/메시지"));
-client.on("messageCreate", require("./이벤트/메시지")); // 🔥 추가됨
 client.on("interactionCreate", require("./이벤트/인터랙션"));
 
-// 준비 완료
 client.once("ready", ()=>{
   console.log(`봇 로그인됨: ${client.user.tag}`);
 });
