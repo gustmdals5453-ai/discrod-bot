@@ -21,18 +21,15 @@ module.exports = {
       });
 
     const 리스트 = top
-      .map((u,i)=> `# ${i+1}위 <@!${u.userId}> - ${f(u.money)}원`)
+      .map((u,i)=> `# ${i+1}위 <@${u.userId}> - ${f(u.money)}원`)
       .join("\n");
 
     return m.reply({
-      allowedMentions: { parse: ["users"] },
       embeds:[
         E("랭킹").setDescription(
 `## TOP 10 랭킹
 
-\`\`\`diff
-${리스트}
-\`\`\``
+${리스트}`
         )
       ]
     });
