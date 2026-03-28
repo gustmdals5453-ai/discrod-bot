@@ -78,38 +78,42 @@ module.exports = async (i) => {
           color: 0x2B2D31
         }
       ],
-      components: i.message.components // 🔥 버튼 유지
+      components: i.message.components
     });
   }
 
   // =========================
-  // 🔥 유저 데이터
+  // 🔥 customId 파싱
   // =========================
-  const user = await getUser(i.user.id);
-
-  // 🔥 버튼 소유자 체크 (안전하게)
-  if (i.message.interaction?.user?.id && i.user.id !== i.message.interaction.user.id) {
-    return i.reply({
-      content: "이 버튼은 본인만 사용할 수 있습니다",
-      ephemeral: true
-    });
-  }
-
-  await i.deferUpdate();
+  const parts = i.customId.split("_");
 
   // =========================
   // 🎰 슬롯
   // =========================
-  if (i.customId.startsWith("slot_")) {
+  if (parts[0] === "slot") {
 
-    const bet = Number(i.customId.split("_")[1]);
+    const bet = Number(parts[1]);
+    const userId = parts[2];
+
+    if (i.user.id !== userId) {
+      return i.reply({
+        content: "본인만 사용할 수 있습니다",
+        ephemeral: true
+      });
+    }
+
+    const user = await getUser(i.user.id);
+
     if (isNaN(bet) || bet <= 0) return;
 
     if (user.money < bet) {
-      return i.editReply({
-        embeds:[G("오류", false).setDescription("잔액 부족")]
+      return i.reply({
+        embeds:[G("오류", false).setDescription("잔액 부족")],
+        ephemeral: true
       });
     }
+
+    await i.deferUpdate();
 
     const icons = ["🍒","🍋","🍊","⭐","💎"];
 
@@ -162,26 +166,38 @@ ${change > 0 ? "+ 획득" : "- 손실"}: ${f(change)}원
 
 ## 💰 잔액 ${f(user.money)}원`
         )
-      ],
-      components: []
+      ]
     });
   }
 
   // =========================
   // ✌️ 가위바위보
   // =========================
-  if (i.customId.startsWith("rps_")) {
+  if (parts[0] === "rps") {
 
-    const [, betRaw, userC] = i.customId.split("_");
-    const bet = Number(betRaw);
+    const bet = Number(parts[1]);
+    const userId = parts[2];
+    const userC = parts[3];
+
+    if (i.user.id !== userId) {
+      return i.reply({
+        content: "본인만 사용할 수 있습니다",
+        ephemeral: true
+      });
+    }
+
+    const user = await getUser(i.user.id);
 
     if (isNaN(bet) || bet <= 0) return;
 
     if (user.money < bet) {
-      return i.editReply({
-        embeds:[G("오류", false).setDescription("잔액 부족")]
+      return i.reply({
+        embeds:[G("오류", false).setDescription("잔액 부족")],
+        ephemeral: true
       });
     }
+
+    await i.deferUpdate();
 
     const choices = ["가위","바위","보"];
     const emoji = {가위:"✌️",바위:"✊",보:"✋"};
@@ -222,26 +238,38 @@ ${change > 0 ? "+" : ""}${f(change)}원
 
 ## 💰 잔액 ${f(user.money)}원`
         )
-      ],
-      components: []
+      ]
     });
   }
 
   // =========================
   // 🎲 바카라 / 블랙잭
   // =========================
-  if (i.customId.startsWith("game_")) {
+  if (parts[0] === "game") {
 
-    const [_, type, betRaw] = i.customId.split("_");
-    const bet = Number(betRaw);
+    const type = parts[1];
+    const bet = Number(parts[2]);
+    const userId = parts[3];
+
+    if (i.user.id !== userId) {
+      return i.reply({
+        content: "본인만 사용할 수 있습니다",
+        ephemeral: true
+      });
+    }
+
+    const user = await getUser(i.user.id);
 
     if (isNaN(bet) || bet <= 0) return;
 
     if (user.money < bet) {
-      return i.editReply({
-        embeds:[G("오류", false).setDescription("잔액 부족")]
+      return i.reply({
+        embeds:[G("오류", false).setDescription("잔액 부족")],
+        ephemeral: true
       });
     }
+
+    await i.deferUpdate();
 
     await new Promise(r => setTimeout(r, 1000));
 
@@ -266,8 +294,7 @@ ${change > 0 ? "+" : ""}${f(change)}원
 
 ## 💰 잔액 ${f(user.money)}원`
         )
-      ],
-      components: []
+      ]
     });
   }
 
@@ -277,13 +304,13 @@ ${change > 0 ? "+" : ""}${f(change)}원
   if (i.customId === "close_ticket") {
 
     if (!i.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
-      return i.followUp({
+      return i.reply({
         content: "관리자만 가능합니다",
         ephemeral: true
       });
     }
 
-    await i.followUp({
+    await i.reply({
       content: "티켓 삭제중...",
       ephemeral: true
     });
