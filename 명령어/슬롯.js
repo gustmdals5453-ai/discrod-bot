@@ -1,7 +1,7 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 
 module.exports = {
-  name:"슬롯",
+  name:"블랙잭",
 
   async execute(m,args,{user,E,err,f}){
 
@@ -15,22 +15,22 @@ module.exports = {
 
     return m.reply({
       embeds:[
-        E("슬롯").setDescription(
-`## 🎰 슬롯 머신
+        E("블랙잭").setDescription(
+`## 블랙잭
 
 \`\`\`diff
 + 배팅 금액: ${f(bet)}원
 \`\`\`
 
-##  시작하려면 버튼을 누르세요`
+## 시작하려면 버튼을 누르세요`
         )
       ],
       components:[
         new ActionRowBuilder().addComponents(
           new ButtonBuilder()
-            .setCustomId(`slot_${bet}`)
-            .setLabel("🎰 시작")
-            .setStyle(ButtonStyle.Success)
+            .setCustomId(`game_블랙잭_${bet}_${m.author.id}`)
+            .setLabel("시작")
+            .setStyle(ButtonStyle.Primary)
         )
       ]
     });
