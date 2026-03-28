@@ -11,7 +11,7 @@ module.exports = {
     return m.reply({
       embeds: [
         E("확인").setDescription(
-`~~~diff
+\`\`\`diff
 + 확인ㅋㅋ
 \`\`\`
         )
