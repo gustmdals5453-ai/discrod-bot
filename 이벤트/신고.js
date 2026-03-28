@@ -13,11 +13,10 @@ module.exports = async (m) => {
   const id = m.author.id;
 
   // =========================
-  // 🔥 처음 진입
+  // 🔥 최초 진입
   // =========================
   if (!sessions[id]) {
-
-    sessions[id] = { step: "메뉴" };
+    sessions[id] = { step: "menu" };
 
     return m.reply({
       embeds: [{
@@ -26,8 +25,8 @@ module.exports = async (m) => {
 `## 선택
 
 \`\`\`diff
-- 신고 입력 → 관리자 신고
-- 도움말 입력 → 사용 방법
+- 신고 → 관리자 신고
+- 도움말 → 사용법 확인
 \`\`\``,
         color: 0x2B2D31
       }]
@@ -37,20 +36,33 @@ module.exports = async (m) => {
   const session = sessions[id];
 
   // =========================
-  // 📘 메뉴 선택
+  // 📌 메뉴 선택
   // =========================
-  if (session.step === "메뉴") {
+  if (session.step === "menu") {
 
     const input = m.content.trim();
 
-    // 🔥 도움말 → 여기서 처리 안함
     if (input === "도움말") {
       delete sessions[id];
-      return; // 👉 메세지.js로 넘김
+
+      return m.reply({
+        embeds: [{
+          title: "안내",
+          description:
+`## 사용 방법
+
+\`\`\`diff
+- 명령어는 서버에서 사용
+- 버튼은 본인만 사용 가능
+- 오류 발생 시 다시 시도
+\`\`\`` ,
+          color: 0x2B2D31
+        }]
+      });
     }
 
     if (input === "신고") {
-      session.step = "사유";
+      session.step = "reason";
 
       return m.reply({
         embeds: [{
@@ -66,16 +78,16 @@ module.exports = async (m) => {
       });
     }
 
-    return;
+    return; // 🔥 여기 중요 (중복 방지)
   }
 
   // =========================
-  // 📝 사유
+  // 📝 사유 입력
   // =========================
-  if (session.step === "사유") {
+  if (session.step === "reason") {
 
     session.reason = m.content;
-    session.step = "증거";
+    session.step = "image";
 
     return m.reply({
       embeds: [{
@@ -92,9 +104,9 @@ module.exports = async (m) => {
   }
 
   // =========================
-  // 📷 증거
+  // 📷 이미지
   // =========================
-  if (session.step === "증거") {
+  if (session.step === "image") {
 
     if (m.attachments.size > 0) {
       session.image = m.attachments.first().url;
@@ -102,7 +114,7 @@ module.exports = async (m) => {
       session.image = m.content === "없음" ? "없음" : m.content;
     }
 
-    session.step = "익명";
+    session.step = "anon";
 
     return m.reply({
       embeds: [{
@@ -122,7 +134,7 @@ module.exports = async (m) => {
   // =========================
   // 🔐 익명 선택
   // =========================
-  if (session.step === "익명") {
+  if (session.step === "anon") {
 
     const input = m.content.trim();
 
@@ -130,9 +142,15 @@ module.exports = async (m) => {
 
     const isAnon = input === "익명";
 
-    const embed = {
-      title: "관리자 비리 신고",
-      description:
+    // 관리자 전송
+    for (const adminId of ADMINS) {
+      try {
+        const admin = await m.client.users.fetch(adminId);
+
+        await admin.send({
+          embeds: [{
+            title: "관리자 비리 신고",
+            description:
 `## 신고 내용
 
 \`\`\`diff
@@ -144,16 +162,12 @@ ${isAnon ? "익명" : `<@${m.author.id}>`}
 
 ## 증거
 ${session.image || "없음"}`,
-      color: 0xED4245
-    };
+            color: 0xED4245
+          }]
+        });
 
-    // 🔥 관리자 전송 (오류 방지)
-    for (const adminId of ADMINS) {
-      try {
-        const admin = await m.client.users.fetch(adminId);
-        await admin.send({ embeds: [embed] });
       } catch (e) {
-        console.log(`DM 실패: ${adminId}`);
+        console.error("관리자 DM 실패:", adminId);
       }
     }
 
