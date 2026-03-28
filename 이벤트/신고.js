@@ -12,56 +12,48 @@ module.exports = async (m) => {
 
   const id = m.author.id;
 
-  // =========================
-  // 🔥 최초 진입
-  // =========================
+  // 🔥 세션 없으면 생성 (BUT 입력 계속 처리)
   if (!sessions[id]) {
     sessions[id] = { step: "menu" };
-
-    return m.reply({
-      embeds: [{
-        title: "문의 시스템",
-        description:
-`## 선택
-
-\`\`\`diff
-- 신고 → 관리자 신고
-- 도움말 → 사용법 확인
-\`\`\``,
-        color: 0x2B2D31
-      }]
-    });
   }
 
   const session = sessions[id];
+  const input = m.content.toLowerCase();
 
   // =========================
-  // 📌 메뉴 선택
+  // 📘 메뉴 선택
   // =========================
   if (session.step === "menu") {
 
-    const input = m.content.trim();
-
-    if (input === "도움말") {
+    // 🔥 help 선택
+    if (input === "help") {
       delete sessions[id];
 
       return m.reply({
         embeds: [{
-          title: "안내",
+          title: "봇 사용 안내",
           description:
-`## 사용 방법
+`## 안내
 
 \`\`\`diff
 - 명령어는 서버에서 사용
 - 버튼은 본인만 사용 가능
-- 오류 발생 시 다시 시도
-\`\`\`` ,
+- 오류 시 재시도
+\`\`\`
+
+## 신고
+
+\`\`\`diff
+- 신고는 report 입력
+\`\`\``,
           color: 0x2B2D31
         }]
       });
     }
 
-    if (input === "신고") {
+    // 🔥 report 선택
+    if (input === "report" || input === "신고") {
+
       session.step = "reason";
 
       return m.reply({
@@ -78,11 +70,24 @@ module.exports = async (m) => {
       });
     }
 
-    return; // 🔥 여기 중요 (중복 방지)
+    // 🔥 아무것도 안했을 때만 메뉴 출력
+    return m.reply({
+      embeds: [{
+        title: "문의 시스템",
+        description:
+`## 선택
+
+\`\`\`diff
+- 신고 입력 → 관리자 신고
+- 도움말 입력 → 사용 방법
+\`\`\``,
+        color: 0x2B2D31
+      }]
+    });
   }
 
   // =========================
-  // 📝 사유 입력
+  // 📝 사유
   // =========================
   if (session.step === "reason") {
 
@@ -136,13 +141,11 @@ module.exports = async (m) => {
   // =========================
   if (session.step === "anon") {
 
-    const input = m.content.trim();
-
     if (input !== "익명" && input !== "공개") return;
 
     const isAnon = input === "익명";
 
-    // 관리자 전송
+    // 🔥 관리자 전송
     for (const adminId of ADMINS) {
       try {
         const admin = await m.client.users.fetch(adminId);
@@ -165,13 +168,12 @@ ${session.image || "없음"}`,
             color: 0xED4245
           }]
         });
-
       } catch (e) {
         console.error("관리자 DM 실패:", adminId);
       }
     }
 
-    delete sessions[id];
+    delete sessions[id]; // 🔥 초기화
 
     return m.reply({
       embeds: [{
