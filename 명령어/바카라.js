@@ -22,19 +22,19 @@ module.exports = {
 + 배팅 금액: ${f(bet)}원
 \`\`\`
 
-##  선택하세요
+## 선택하세요
 - 플레이어 / 뱅커`
         )
       ],
       components:[
         new ActionRowBuilder().addComponents(
           new ButtonBuilder()
-            .setCustomId(`game_player_${bet}`)
+            .setCustomId(`game_player_${bet}_${m.author.id}`)
             .setLabel("플레이어")
             .setStyle(ButtonStyle.Primary),
 
           new ButtonBuilder()
-            .setCustomId(`game_banker_${bet}`)
+            .setCustomId(`game_banker_${bet}_${m.author.id}`)
             .setLabel("뱅커")
             .setStyle(ButtonStyle.Danger)
         )
