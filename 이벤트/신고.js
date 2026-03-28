@@ -11,23 +11,38 @@ module.exports = async (m) => {
   if (m.channel.type !== 1) return;
 
   const id = m.author.id;
+  const input = m.content.toLowerCase().trim();
 
-  // 🔥 세션 없으면 생성 (BUT 입력 계속 처리)
+  // =========================
+  // 🔥 세션 없으면 생성 + 메뉴 바로 출력
+  // =========================
   if (!sessions[id]) {
     sessions[id] = { step: "menu" };
+
+    return m.reply({
+      embeds: [{
+        title: "문의 시스템",
+        description:
+`## 선택
+
+\`\`\`diff
+- 신고 입력 → 관리자 신고
+- 도움말 입력 → 사용 방법
+\`\`\``,
+        color: 0x2B2D31
+      }]
+    });
   }
 
   const session = sessions[id];
-  const input = m.content.toLowerCase();
 
   // =========================
-  // 📘 메뉴 선택
+  // 📘 메뉴
   // =========================
   if (session.step === "menu") {
 
-    // 🔥 help 선택
-    if (input === "help") {
-      delete sessions[id];
+    if (input === "도움말") {
+      delete sessions[id]; // 🔥 완전 초기화
 
       return m.reply({
         embeds: [{
@@ -38,22 +53,14 @@ module.exports = async (m) => {
 \`\`\`diff
 - 명령어는 서버에서 사용
 - 버튼은 본인만 사용 가능
-- 오류 시 재시도
-\`\`\`
-
-## 신고
-
-\`\`\`diff
-- 신고는 report 입력
+- 오류 시 다시 시도
 \`\`\``,
           color: 0x2B2D31
         }]
       });
     }
 
-    // 🔥 report 선택
-    if (input === "report" || input === "신고") {
-
+    if (input === "신고") {
       session.step = "reason";
 
       return m.reply({
@@ -70,7 +77,7 @@ module.exports = async (m) => {
       });
     }
 
-    // 🔥 아무것도 안했을 때만 메뉴 출력
+    // 🔥 다른 입력 → 다시 메뉴
     return m.reply({
       embeds: [{
         title: "문의 시스템",
@@ -116,7 +123,7 @@ module.exports = async (m) => {
     if (m.attachments.size > 0) {
       session.image = m.attachments.first().url;
     } else {
-      session.image = m.content === "없음" ? "없음" : m.content;
+      session.image = input === "없음" ? "없음" : m.content;
     }
 
     session.step = "anon";
@@ -141,11 +148,24 @@ module.exports = async (m) => {
   // =========================
   if (session.step === "anon") {
 
-    if (input !== "익명" && input !== "공개") return;
+    if (input !== "익명" && input !== "공개") {
+      return m.reply({
+        embeds: [{
+          title: "관리자 신고",
+          description:
+`## 입력 오류
+
+\`\`\`diff
+- 익명 또는 공개만 입력하세요
+\`\`\``,
+          color: 0xED4245
+        }]
+      });
+    }
 
     const isAnon = input === "익명";
 
-    // 🔥 관리자 전송
+    // 🔥 관리자 DM 전송
     for (const adminId of ADMINS) {
       try {
         const admin = await m.client.users.fetch(adminId);
@@ -168,12 +188,13 @@ ${session.image || "없음"}`,
             color: 0xED4245
           }]
         });
+
       } catch (e) {
         console.error("관리자 DM 실패:", adminId);
       }
     }
 
-    delete sessions[id]; // 🔥 초기화
+    delete sessions[id]; // 🔥 완전 초기화
 
     return m.reply({
       embeds: [{
