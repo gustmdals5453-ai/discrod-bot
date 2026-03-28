@@ -121,12 +121,11 @@ module.exports = async (i) => {
       await new Promise(r => setTimeout(r, 500));
       await i.editReply({
         embeds: [G("슬롯", true).setDescription(
-`## 🎰 슬롯 머신
+`## 슬롯 머신
 
 \`\`\`diff
 # ${rand(icons)} ${rand(icons)} ${rand(icons)}
-\`\`\``
-        )],
+\`\`\``)],
         components: []
       });
     }
@@ -152,10 +151,10 @@ module.exports = async (i) => {
     return i.editReply({
       embeds: [
         G("슬롯 결과", win).setDescription(
-`## 🎰 슬롯 결과
+`## 슬롯 결과
 
 \`\`\`diff
-${win ? "+ 당첨!" : "- 실패"}
+${win ? "+ 당첨" : "- 실패"}
 \`\`\`
 
 ## ${r1} ${r2} ${r3}
@@ -164,8 +163,7 @@ ${win ? "+ 당첨!" : "- 실패"}
 ${change > 0 ? "+ 획득" : "- 손실"}: ${f(change)}원
 \`\`\`
 
-## 💰 잔액 ${f(user.money)}원`
-        )
+## 잔액 ${f(user.money)}원`)
       ]
     });
   }
@@ -236,8 +234,7 @@ ${change > 0 ? "+ 승리" : change < 0 ? "- 패배" : "# 무승부"}
 ${change > 0 ? "+" : ""}${f(change)}원
 \`\`\`
 
-## 💰 잔액 ${f(user.money)}원`
-        )
+## 잔액 ${f(user.money)}원`)
       ]
     });
   }
@@ -285,15 +282,14 @@ ${change > 0 ? "+" : ""}${f(change)}원
 `## ${type}
 
 \`\`\`diff
-${win ? "+ 승리!" : "- 패배"}
+${win ? "+ 승리" : "- 패배"}
 \`\`\`
 
 \`\`\`diff
 ${change > 0 ? "+" : ""}${f(change)}원
 \`\`\`
 
-## 💰 잔액 ${f(user.money)}원`
-        )
+## 잔액 ${f(user.money)}원`)
       ]
     });
   }
