@@ -30,13 +30,16 @@ mongoose.connect(process.env.MONGO_URI)
 // 명령어 로드
 require("./핸들러/명령어로더")(client);
 
-// ✅ 이벤트 하나만
+// 이벤트
 client.on("messageCreate", require("./이벤트/메시지"));
 client.on("interactionCreate", require("./이벤트/인터랙션"));
 
 client.once("ready", ()=>{
   console.log(`봇 로그인됨: ${client.user.tag}`);
 });
+
+// 🔥 여기 추가
+require("./이벤트/tts")(client);
 
 // 에러 방지
 process.on("unhandledRejection", console.error);
