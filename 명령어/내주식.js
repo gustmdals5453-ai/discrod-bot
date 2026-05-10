@@ -21,7 +21,8 @@ module.exports = {
       return message.reply({
         embeds: [
           new EmbedBuilder()
-            .setTitle("내 주식")
+            .setTitle("📈 내 주식")
+            .setColor("Red")
             .setDescription(
 `## 보유 주식 없음
 
@@ -29,7 +30,6 @@ module.exports = {
 - 현재 보유중인 주식이 없습니다
 \`\`\``
             )
-            .setColor("Red")
         ]
       });
     }
@@ -55,8 +55,8 @@ module.exports = {
 
       text +=
 `📌 ${stockInfo.name} (${stockInfo.code})
-보유 수량: ${amount}주
-현재 가치: ${value.toLocaleString()}원
+📈 보유 수량: ${amount}주
+💰 현재 가치: ${value.toLocaleString()}원
 
 `;
     }
@@ -66,7 +66,8 @@ module.exports = {
       return message.reply({
         embeds: [
           new EmbedBuilder()
-            .setTitle("내 주식")
+            .setTitle("📈 내 주식")
+            .setColor("Red")
             .setDescription(
 `## 보유 주식 없음
 
@@ -74,18 +75,21 @@ module.exports = {
 - 현재 보유중인 유효한 주식이 없습니다
 \`\`\``
             )
-            .setColor("Red")
         ]
       });
     }
 
     const embed = new EmbedBuilder()
-      .setTitle(`${message.author.username}님의 주식`)
+      .setTitle(`📈 ${message.author.username}님의 주식`)
+      .setColor("Blue")
       .setDescription(
 `${text}
-💰 총 자산: ${total.toLocaleString()}원`
-      )
-      .setColor("Blue");
+## 총 자산
+
+\`\`\`diff
++ ${total.toLocaleString()}원
+\`\`\``
+      );
 
     message.reply({
       embeds: [embed]
