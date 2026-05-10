@@ -3,7 +3,8 @@ const {
   createAudioPlayer,
   createAudioResource,
   AudioPlayerStatus,
-  NoSubscriberBehavior
+  NoSubscriberBehavior,
+  demuxProbe
 } = require("@discordjs/voice");
 
 const googleTTS = require("google-tts-api");
@@ -17,26 +18,25 @@ const TEXT_CHANNEL_ID = "1502932634378965083";
 
 module.exports = async (client) => {
 
-  console.log("tts 이벤트 등록 완료");
-
   const player = createAudioPlayer({
     behaviors: {
       noSubscriber: NoSubscriberBehavior.Play
     }
   });
 
-  // 상태 변화 로그
+  let connection;
+
   player.on("stateChange", (oldState, newState) => {
     console.log(`상태 변경: ${oldState.status} -> ${newState.status}`);
   });
 
-  client.on("ready", async () => {
+  client.once("clientReady", async () => {
 
     console.log("봇 ready 감지");
 
     const channel = await client.channels.fetch(VOICE_CHANNEL_ID);
 
-    const connection = joinVoiceChannel({
+    connection = joinVoiceChannel({
       channelId: channel.id,
       guildId: channel.guild.id,
       adapterCreator: channel.guild.voiceAdapterCreator,
@@ -63,8 +63,6 @@ module.exports = async (client) => {
       return;
     }
 
-    console.log("TTS 채널 감지 성공");
-
     try {
 
       const url = googleTTS.getAudioUrl(m.content, {
@@ -80,7 +78,12 @@ module.exports = async (client) => {
 
       console.log("mp3 저장 완료");
 
-      const resource = createAudioResource("./tts.mp3", {
+      const stream = fs.createReadStream("./tts.mp3");
+
+      const probe = await demuxProbe(stream);
+
+      const resource = createAudioResource(probe.stream, {
+        inputType: probe.type,
         inlineVolume: true
       });
 
