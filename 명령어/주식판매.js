@@ -4,9 +4,9 @@ const User = require("../모델/유저");
 const Stock = require("../모델/주식");
 
 module.exports = {
-  이름: "주식판매",
+  name: "주식판매",
 
-  async 실행(message, args) {
+  async execute(message, args) {
 
     const code = args[0];
     const amount = Number(args[1]);
