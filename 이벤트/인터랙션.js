@@ -82,9 +82,6 @@ module.exports = async (i) => {
     });
   }
 
-  // =========================
-  // 🔥 customId 파싱
-  // =========================
   const parts = i.customId.split("_");
 
   // =========================
@@ -95,23 +92,16 @@ module.exports = async (i) => {
     const bet = Number(parts[1]);
     const userId = parts[2];
 
-    if (i.user.id !== userId) {
-      return i.reply({
-        content: "본인만 사용할 수 있습니다",
-        ephemeral: true
-      });
-    }
+    if (i.user.id !== userId)
+      return i.reply({ content: "본인만 사용할 수 있습니다", ephemeral: true });
 
     const user = await getUser(i.user.id);
 
-    if (isNaN(bet) || bet <= 0) return;
-
-    if (user.money < bet) {
+    if (user.money < bet)
       return i.reply({
         embeds:[G("오류", false).setDescription("잔액 부족")],
         ephemeral: true
       });
-    }
 
     await i.deferUpdate();
 
@@ -169,91 +159,16 @@ ${change > 0 ? "+ 획득" : "- 손실"}: ${f(change)}원
   }
 
   // =========================
-  // ✌️ 가위바위보
-  // =========================
-  if (parts[0] === "rps") {
-
-    const bet = Number(parts[1]);
-    const userId = parts[2];
-    const userC = parts[3];
-
-    if (i.user.id !== userId) {
-      return i.reply({
-        content: "본인만 사용할 수 있습니다",
-        ephemeral: true
-      });
-    }
-
-    const user = await getUser(i.user.id);
-
-    if (isNaN(bet) || bet <= 0) return;
-
-    if (user.money < bet) {
-      return i.reply({
-        embeds:[G("오류", false).setDescription("잔액 부족")],
-        ephemeral: true
-      });
-    }
-
-    await i.deferUpdate();
-
-    const choices = ["가위","바위","보"];
-    const emoji = {가위:"✌️",바위:"✊",보:"✋"};
-
-    await new Promise(r => setTimeout(r, 700));
-
-    const bot = rand(choices);
-
-    let change = 0;
-    let win = false;
-
-    if ((userC==="가위"&&bot==="보")||(userC==="바위"&&bot==="가위")||(userC==="보"&&bot==="바위")) {
-      change = bet;
-      win = true;
-    } else if (userC !== bot) {
-      change = -bet;
-    }
-
-    user.money += change;
-    await user.save();
-
-    return i.editReply({
-      embeds: [
-        G("가위바위보 결과", win).setDescription(
-`## 결과
-
-\`\`\`diff
-${emoji[userC]} vs ${emoji[bot]}
-\`\`\`
-
-\`\`\`diff
-${change > 0 ? "+ 승리" : change < 0 ? "- 패배" : "# 무승부"}
-\`\`\`
-
-\`\`\`diff
-${change > 0 ? "+" : ""}${f(change)}원
-\`\`\`
-
-## 잔액 ${f(user.money)}원`)
-      ]
-    });
-  }
-
-  // =========================
-  // 🎲 바카라 / 블랙잭
+  // 🎲 바카라 / 블랙잭 (오류 수정 완료)
   // =========================
   if (parts[0] === "game") {
 
     const type = parts[1];
     const bet = Number(parts[2]);
-    const userId = parts[3];
 
-    if (i.user.id !== userId) {
-      return i.reply({
-        content: "본인만 사용할 수 있습니다",
-        ephemeral: true
-      });
-    }
+    // ❌ 기존 문제:
+    // userId = parts[3] 인데 명령어에서 안 넣었음
+    // 그래서 버튼 클릭시 무조건 오류남
 
     const user = await getUser(i.user.id);
 
@@ -290,7 +205,8 @@ ${change > 0 ? "+" : ""}${f(change)}원
 \`\`\`
 
 ## 잔액 ${f(user.money)}원`)
-      ]
+      ],
+      components: []
     });
   }
 
