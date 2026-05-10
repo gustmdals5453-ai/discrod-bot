@@ -7,7 +7,11 @@ if (cmd === "내주식") {
     userId: m.author.id
   });
 
-  if (!user || !user.stocks || Object.keys(user.stocks).length === 0) {
+  if (
+    !user ||
+    !user.stocks ||
+    Object.keys(user.stocks).length === 0
+  ) {
 
     return m.reply({
       embeds: [{
@@ -30,10 +34,14 @@ if (cmd === "내주식") {
 
     const amount = user.stocks[code];
 
+    // 0주 이하 스킵
+    if (amount <= 0) continue;
+
     const stockInfo = await Stock.findOne({
       code
     });
 
+    // 존재하지 않는 주식 스킵
     if (!stockInfo) continue;
 
     const value = stockInfo.price * amount;
@@ -46,6 +54,23 @@ if (cmd === "내주식") {
 현재 가치: ${value.toLocaleString()}원
 
 `;
+  }
+
+  // 출력할 주식이 하나도 없을 경우
+  if (!text) {
+
+    return m.reply({
+      embeds: [{
+        title: "내 주식",
+        description:
+`## 보유 주식 없음
+
+\`\`\`diff
+- 현재 보유중인 유효한 주식이 없습니다
+\`\`\``,
+        color: 0xED4245
+      }]
+    });
   }
 
   return m.reply({
