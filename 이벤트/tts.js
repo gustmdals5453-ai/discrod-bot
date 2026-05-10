@@ -14,10 +14,14 @@ const fetch = require("node-fetch");
 const fs = require("fs");
 const prism = require("prism-media");
 
+console.log("tts.js 시작됨");
+
 const VOICE_CHANNEL_ID = "1469200371833376832";
 const TEXT_CHANNEL_ID = "1502932634378965083";
 
-module.exports = async (client) => {
+module.exports = (client) => {
+
+  console.log("tts 함수 실행됨");
 
   const player = createAudioPlayer({
     behaviors: {
@@ -25,40 +29,55 @@ module.exports = async (client) => {
     }
   });
 
-  client.once("clientReady", async () => {
+  client.once("ready", async () => {
 
-    console.log("봇 ready 감지");
+    console.log("ready 이벤트 실행");
 
-    const channel = await client.channels.fetch(VOICE_CHANNEL_ID);
+    try {
 
-    const connection = joinVoiceChannel({
-      channelId: channel.id,
-      guildId: channel.guild.id,
-      adapterCreator: channel.guild.voiceAdapterCreator,
-      selfDeaf: false,
-      selfMute: false
-    });
+      const channel = await client.channels.fetch(VOICE_CHANNEL_ID);
 
-    connection.subscribe(player);
+      const connection = joinVoiceChannel({
+        channelId: channel.id,
+        guildId: channel.guild.id,
+        adapterCreator: channel.guild.voiceAdapterCreator,
+        selfDeaf: false,
+        selfMute: false
+      });
 
-    console.log("TTS 연결 완료");
+      connection.subscribe(player);
+
+      console.log("음성채널 연결 성공");
+
+    } catch (err) {
+
+      console.error("음성 연결 오류:", err);
+
+    }
   });
 
   client.on("messageCreate", async (m) => {
 
-    console.log("메시지 들어옴:", m.content);
-
-    if (m.author.bot) return;
-    if (m.channel.id !== TEXT_CHANNEL_ID) return;
-
-    const member = m.guild.members.cache.get(m.author.id);
-
-    if (!member.voice.channelId || member.voice.channelId !== VOICE_CHANNEL_ID) {
-      console.log("음성방 미참가");
-      return;
-    }
+    console.log("메시지 감지:", m.content);
 
     try {
+
+      if (m.author.bot) return;
+      if (m.channel.id !== TEXT_CHANNEL_ID) return;
+
+      const member = m.guild.members.cache.get(m.author.id);
+
+      if (!member.voice.channelId) {
+        console.log("음성방 없음");
+        return;
+      }
+
+      if (member.voice.channelId !== VOICE_CHANNEL_ID) {
+        console.log("다른 음성방");
+        return;
+      }
+
+      console.log("TTS 시작");
 
       const url = googleTTS.getAudioUrl(m.content, {
         lang: "ko",
@@ -93,17 +112,17 @@ module.exports = async (client) => {
 
       player.play(resource);
 
-      console.log("재생 시작");
+      console.log("재생 요청 완료");
 
     } catch (err) {
 
-      console.error(err);
+      console.error("TTS 오류:", err);
 
     }
   });
 
   player.on(AudioPlayerStatus.Playing, () => {
-    console.log("현재 음성 출력중");
+    console.log("실제 음성 출력중");
   });
 
   player.on("error", (err) => {
