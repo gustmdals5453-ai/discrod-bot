@@ -11,7 +11,8 @@ const client = new Client({
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.DirectMessages
+    GatewayIntentBits.DirectMessages,
+    GatewayIntentBits.GuildVoiceStates
   ],
   partials: [Partials.Channel]
 });
@@ -91,7 +92,7 @@ client.once("ready", async ()=>{
 
 });
 
-// 🔥 여기 추가
+// ================== TTS 이벤트 ==================
 require("./이벤트/tts")(client);
 
 // ================== 에러 방지 ==================
