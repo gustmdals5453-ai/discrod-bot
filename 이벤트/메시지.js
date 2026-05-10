@@ -2,7 +2,7 @@ const { getUser, f, rand, err } = require("../유틸/함수");
 const { E, G } = require("../유틸/임베드");
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 
-const UserStock = require("../모델/유저주식");
+const User = require("../모델/유저");
 const Stock = require("../모델/주식");
 
 const prefix = "!";
@@ -29,7 +29,10 @@ module.exports = async (m) => {
     const input = m.content.trim();
 
     if (!dmState[id]) {
-      dmState[id] = { step: "menu" };
+
+      dmState[id] = {
+        step: "menu"
+      };
 
       return m.reply({
         embeds: [{
@@ -56,10 +59,25 @@ module.exports = async (m) => {
       if (input === "도움말") {
 
         const row = new ActionRowBuilder().addComponents(
-          new ButtonBuilder().setCustomId("help_경제").setLabel("경제").setStyle(ButtonStyle.Primary),
-          new ButtonBuilder().setCustomId("help_도박").setLabel("도박").setStyle(ButtonStyle.Primary),
-          new ButtonBuilder().setCustomId("help_관리").setLabel("관리").setStyle(ButtonStyle.Primary),
-          new ButtonBuilder().setCustomId("help_공지").setLabel("공지").setStyle(ButtonStyle.Secondary)
+          new ButtonBuilder()
+            .setCustomId("help_경제")
+            .setLabel("경제")
+            .setStyle(ButtonStyle.Primary),
+
+          new ButtonBuilder()
+            .setCustomId("help_도박")
+            .setLabel("도박")
+            .setStyle(ButtonStyle.Primary),
+
+          new ButtonBuilder()
+            .setCustomId("help_관리")
+            .setLabel("관리")
+            .setStyle(ButtonStyle.Primary),
+
+          new ButtonBuilder()
+            .setCustomId("help_공지")
+            .setLabel("공지")
+            .setStyle(ButtonStyle.Secondary)
         );
 
         delete dmState[id];
@@ -80,6 +98,7 @@ module.exports = async (m) => {
       }
 
       if (input === "신고") {
+
         session.step = "reason";
 
         return m.reply({
@@ -139,9 +158,14 @@ module.exports = async (m) => {
     if (session.step === "image") {
 
       if (m.attachments.size > 0) {
+
         session.image = m.attachments.first().url;
+
       } else {
-        session.image = input === "없음" ? "없음" : input;
+
+        session.image = input === "없음"
+          ? "없음"
+          : input;
       }
 
       session.step = "anon";
@@ -226,7 +250,11 @@ ${session.image || "없음"}`,
   // =========================
   if (!m.content.startsWith(prefix)) return;
 
-  const args = m.content.slice(prefix.length).trim().split(/ +/);
+  const args = m.content
+    .slice(prefix.length)
+    .trim()
+    .split(/ +/);
+
   const cmd = args.shift();
 
   // =========================
@@ -234,11 +262,15 @@ ${session.image || "없음"}`,
   // =========================
   if (cmd === "내주식") {
 
-    const stocks = await UserStock.find({
+    const user = await User.findOne({
       userId: m.author.id
     });
 
-    if (!stocks.length) {
+    if (
+      !user ||
+      !user.stocks ||
+      Object.keys(user.stocks).length === 0
+    ) {
 
       return m.reply({
         embeds: [{
@@ -252,27 +284,30 @@ ${session.image || "없음"}`,
           color: 0xED4245
         }]
       });
-
     }
 
     let text = "";
     let total = 0;
 
-    for (const data of stocks) {
+    for (const code in user.stocks) {
+
+      const amount = user.stocks[code];
+
+      if (amount <= 0) continue;
 
       const stockInfo = await Stock.findOne({
-        code: data.stockCode
+        code
       });
 
       if (!stockInfo) continue;
 
-      const value = stockInfo.price * data.amount;
+      const value = stockInfo.price * amount;
 
       total += value;
 
       text +=
 `📌 ${stockInfo.name} (${stockInfo.code})
-보유 수량: ${data.amount}주
+보유 수량: ${amount}주
 현재 가치: ${value.toLocaleString()}원
 
 `;
@@ -290,9 +325,70 @@ ${session.image || "없음"}`,
   }
 
   // =========================
+  // 🏢 보유회사
+  // =========================
+  if (cmd === "보유회사") {
+
+    const user = await User.findOne({
+      userId: m.author.id
+    });
+
+    if (
+      !user ||
+      !user.stocks ||
+      Object.keys(user.stocks).length === 0
+    ) {
+
+      return m.reply({
+        embeds: [{
+          title: "보유 회사",
+          description:
+`## 보유 회사 없음
+
+\`\`\`diff
+- 현재 보유중인 회사가 없습니다
+\`\`\``,
+          color: 0xED4245
+        }]
+      });
+    }
+
+    let text = "";
+
+    for (const code in user.stocks) {
+
+      const amount = user.stocks[code];
+
+      if (amount <= 0) continue;
+
+      const stockInfo = await Stock.findOne({
+        code
+      });
+
+      if (!stockInfo) continue;
+
+      text +=
+`🏢 ${stockInfo.name}
+📌 코드: ${stockInfo.code}
+📈 보유 주식: ${amount}주
+
+`;
+    }
+
+    return m.reply({
+      embeds: [{
+        title: `${m.author.username}님의 보유 회사`,
+        description: text,
+        color: 0xF1C40F
+      }]
+    });
+  }
+
+  // =========================
   // 🔥 기존 명령어
   // =========================
   const command = m.client.commands.get(cmd);
+
   if (!command) return;
 
   const user = await getUser(m.author.id);
