@@ -1,86 +1,94 @@
-// =========================
-// 📈 내주식
-// =========================
-if (cmd === "내주식") {
+const { EmbedBuilder } = require("discord.js");
 
-  const user = await User.findOne({
-    userId: m.author.id
-  });
+const User = require("../모델/유저");
+const Stock = require("../모델/주식");
 
-  // 유저 없거나 주식 없음
-  if (
-    !user ||
-    !user.stocks ||
-    Object.keys(user.stocks).length === 0
-  ) {
+module.exports = {
+  name: "내주식",
 
-    return m.reply({
-      embeds: [{
-        title: "내 주식",
-        description:
+  async execute(message) {
+
+    const user = await User.findOne({
+      userId: message.author.id
+    });
+
+    if (
+      !user ||
+      !user.stocks ||
+      Object.keys(user.stocks).length === 0
+    ) {
+
+      return message.reply({
+        embeds: [
+          new EmbedBuilder()
+            .setTitle("내 주식")
+            .setDescription(
 `## 보유 주식 없음
 
 \`\`\`diff
 - 현재 보유중인 주식이 없습니다
-\`\`\``,
-        color: 0xED4245
-      }]
-    });
-  }
+\`\`\``
+            )
+            .setColor("Red")
+        ]
+      });
+    }
 
-  let text = "";
-  let total = 0;
+    let text = "";
+    let total = 0;
 
-  for (const code in user.stocks) {
+    for (const code in user.stocks) {
 
-    const amount = user.stocks[code];
+      const amount = user.stocks[code];
 
-    // 0주 이하 스킵
-    if (amount <= 0) continue;
+      if (amount <= 0) continue;
 
-    const stockInfo = await Stock.findOne({
-      code
-    });
+      const stockInfo = await Stock.findOne({
+        code
+      });
 
-    // 존재하지 않는 주식이면 스킵
-    if (!stockInfo) continue;
+      if (!stockInfo) continue;
 
-    const value = stockInfo.price * amount;
+      const value = stockInfo.price * amount;
 
-    total += value;
+      total += value;
 
-    text +=
+      text +=
 `📌 ${stockInfo.name} (${stockInfo.code})
 보유 수량: ${amount}주
 현재 가치: ${value.toLocaleString()}원
 
 `;
-  }
+    }
 
-  // 실제 표시할 주식 없을 경우
-  if (!text) {
+    if (!text) {
 
-    return m.reply({
-      embeds: [{
-        title: "내 주식",
-        description:
+      return message.reply({
+        embeds: [
+          new EmbedBuilder()
+            .setTitle("내 주식")
+            .setDescription(
 `## 보유 주식 없음
 
 \`\`\`diff
 - 현재 보유중인 유효한 주식이 없습니다
-\`\`\``,
-        color: 0xED4245
-      }]
+\`\`\``
+            )
+            .setColor("Red")
+        ]
+      });
+    }
+
+    const embed = new EmbedBuilder()
+      .setTitle(`${message.author.username}님의 주식`)
+      .setDescription(
+`${text}
+💰 총 자산: ${total.toLocaleString()}원`
+      )
+      .setColor("Blue");
+
+    message.reply({
+      embeds: [embed]
     });
   }
-
-  return m.reply({
-    embeds: [{
-      title: `${m.author.username}님의 주식`,
-      description:
-`${text}
-💰 총 자산: ${total.toLocaleString()}원`,
-      color: 0x5865F2
-    }]
-  });
-}
+};
