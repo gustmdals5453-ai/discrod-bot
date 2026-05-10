@@ -14,8 +14,18 @@ module.exports = {
     if (!code || !amount) {
 
       return message.reply({
-        content:
-"```diff\n- 사용법: !주식구매 코드 수량\n```"
+        embeds: [
+          new EmbedBuilder()
+            .setColor("Red")
+            .setTitle("📈 주식 구매")
+            .setDescription(
+`## 사용법
+
+\`\`\`diff
+- !주식구매 코드 수량
+\`\`\``
+            )
+        ]
       });
     }
 
@@ -26,8 +36,18 @@ module.exports = {
     if (!stock) {
 
       return message.reply({
-        content:
-"```diff\n- 존재하지 않는 주식입니다.\n```"
+        embeds: [
+          new EmbedBuilder()
+            .setColor("Red")
+            .setTitle("📈 주식 구매")
+            .setDescription(
+`## 오류
+
+\`\`\`diff
+- 존재하지 않는 주식입니다
+\`\`\``
+            )
+        ]
       });
     }
 
@@ -47,24 +67,31 @@ module.exports = {
     if (user.money < total) {
 
       return message.reply({
-        content:
-"```diff\n- 돈이 부족합니다.\n```"
+        embeds: [
+          new EmbedBuilder()
+            .setColor("Red")
+            .setTitle("📈 주식 구매")
+            .setDescription(
+`## 구매 실패
+
+\`\`\`diff
+- 돈이 부족합니다
+\`\`\``
+            )
+        ]
       });
     }
 
     user.money -= total;
 
-    // stocks 없을 경우 생성
     if (!user.stocks) {
       user.stocks = {};
     }
 
-    // 해당 주식 없을 경우 생성
     if (!user.stocks[stock.code]) {
       user.stocks[stock.code] = 0;
     }
 
-    // 주식 추가
     user.stocks[stock.code] += amount;
 
     user.markModified("stocks");
@@ -75,10 +102,15 @@ module.exports = {
       .setTitle("📈 주식 구매 완료")
       .setColor("Green")
       .setDescription(
-`${stock.name} 주식 ${amount}주 구매 완료
+`## 구매 성공
 
-💰 사용 금액:
-${total.toLocaleString()}원`
+\`\`\`diff
++ ${stock.name} ${amount}주 구매 완료
+\`\`\`
+
+## 결제 금액
+
+💰 ${total.toLocaleString()}원`
       );
 
     message.reply({
