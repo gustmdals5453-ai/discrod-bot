@@ -1,47 +1,60 @@
-const UserStock = require("../모델/유저주식");
-const Stock = require("../모델/주식");
+// =========================
+// 📈 내주식
+// =========================
+if (cmd === "내주식") {
 
-module.exports = {
+  const user = await User.findOne({
+    userId: m.author.id
+  });
 
-  이름: "내주식",
+  if (!user || !user.stocks || Object.keys(user.stocks).length === 0) {
 
-  실행: async (message) => {
+    return m.reply({
+      embeds: [{
+        title: "내 주식",
+        description:
+`## 보유 주식 없음
 
-    const stocks = await UserStock.find({
-      userId: message.author.id
+\`\`\`diff
+- 현재 보유중인 주식이 없습니다
+\`\`\``,
+        color: 0xED4245
+      }]
+    });
+  }
+
+  let text = "";
+  let total = 0;
+
+  for (const code in user.stocks) {
+
+    const amount = user.stocks[code];
+
+    const stockInfo = await Stock.findOne({
+      code
     });
 
-    if (!stocks.length) {
+    if (!stockInfo) continue;
 
-      return message.reply("보유한 주식이 없습니다.");
+    const value = stockInfo.price * amount;
 
-    }
+    total += value;
 
-    let text = "📈 보유 주식 목록\n\n";
+    text +=
+`📌 ${stockInfo.name} (${stockInfo.code})
+보유 수량: ${amount}주
+현재 가치: ${value.toLocaleString()}원
 
-    let total = 0;
-
-    for (const data of stocks) {
-
-      const stockInfo = await Stock.findOne({
-        code: data.stockCode
-      });
-
-      if (!stockInfo) continue;
-
-      const value = stockInfo.price * data.amount;
-
-      total += value;
-
-      text += `${stockInfo.name} (${stockInfo.code})\n`;
-      text += `보유 수량: ${data.amount}주\n`;
-      text += `현재 가치: ${value.toLocaleString()}원\n\n`;
-
-    }
-
-    text += `💰 총 자산: ${total.toLocaleString()}원`;
-
-    message.reply(text);
-
+`;
   }
-};
+
+  return m.reply({
+    embeds: [{
+      title: `${m.author.username}님의 주식`,
+      description:
+`${text}
+💰 총 자산: ${total.toLocaleString()}원`,
+      color: 0x5865F2
+    }]
+  });
+}
