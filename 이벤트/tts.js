@@ -1,7 +1,8 @@
 const {
   joinVoiceChannel,
   createAudioPlayer,
-  createAudioResource
+  createAudioResource,
+  AudioPlayerStatus
 } = require("@discordjs/voice");
 
 const googleTTS = require("google-tts-api");
@@ -34,21 +35,37 @@ module.exports = async (client) => {
     if (m.author.bot) return;
     if (m.channel.id !== TEXT_CHANNEL_ID) return;
 
-    const url = googleTTS.getAudioUrl(m.content, {
-      lang: "ko",
-      slow: false
-    });
+    console.log("메시지 감지:", m.content);
 
-    const file = path.join(__dirname, "tts.mp3");
-    const stream = fs.createWriteStream(file);
-
-    https.get(url, (res) => {
-      res.pipe(stream);
-
-      stream.on("finish", () => {
-        const resource = createAudioResource(file);
-        player.play(resource);
+    try {
+      const url = googleTTS.getAudioUrl(m.content, {
+        lang: "ko",
+        slow: false
       });
-    });
+
+      const file = path.join(__dirname, "tts.mp3");
+      const stream = fs.createWriteStream(file);
+
+      https.get(url, (res) => {
+        res.pipe(stream);
+
+        stream.on("finish", () => {
+          console.log("mp3 생성 완료");
+
+          const resource = createAudioResource(file);
+
+          player.play(resource);
+
+          console.log("재생 시작");
+        });
+      });
+
+    } catch (err) {
+      console.log("TTS 오류:", err);
+    }
+  });
+
+  player.on(AudioPlayerStatus.Playing, () => {
+    console.log("현재 음성 출력중");
   });
 };
