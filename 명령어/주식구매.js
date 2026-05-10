@@ -1,74 +1,60 @@
-const { EmbedBuilder } = require("discord.js");
+// =========================
+// 📈 내주식
+// =========================
+if (cmd === "내주식") {
 
-const User = require("../모델/유저");
-const Stock = require("../모델/주식");
+  const user = await User.findOne({
+    userId: m.author.id
+  });
 
-module.exports = {
-  name: "주식구매",
+  if (!user || !user.stocks || Object.keys(user.stocks).length === 0) {
 
-  async execute(message, args) {
+    return m.reply({
+      embeds: [{
+        title: "내 주식",
+        description:
+`## 보유 주식 없음
 
-    const code = args[0];
-    const amount = Number(args[1]);
-
-    if (!code || !amount) {
-      return message.reply({
-        content: "```diff\n- 사용법: !주식구매 코드 수량\n```"
-      });
-    }
-
-    const stock = await Stock.findOne({
-      code: code.toUpperCase()
-    });
-
-    if (!stock) {
-      return message.reply({
-        content: "```diff\n- 존재하지 않는 주식입니다.\n```"
-      });
-    }
-
-    let user = await User.findOne({
-      userId: message.author.id
-    });
-
-    if (!user) {
-      user = await User.create({
-        userId: message.author.id
-      });
-    }
-
-    const total = stock.price * amount;
-
-    if (user.money < total) {
-      return message.reply({
-        content: "```diff\n- 돈이 부족합니다.\n```"
-      });
-    }
-
-    user.money -= total;
-
-    if (!user.stocks[stock.code]) {
-      user.stocks[stock.code] = 0;
-    }
-
-    user.stocks[stock.code] += amount;
-
-    user.markModified("stocks");
-
-    await user.save();
-
-    const embed = new EmbedBuilder()
-      .setTitle("📈 주식 구매 완료")
-      .setColor("Green")
-      .setDescription(
-`${stock.name} 주식 ${amount}주 구매 완료
-
-💰 사용 금액:
-${total.toLocaleString()}원`
-      );
-
-    message.reply({
-      embeds: [embed]
+\`\`\`diff
+- 현재 보유중인 주식이 없습니다
+\`\`\``,
+        color: 0xED4245
+      }]
     });
   }
-};
+
+  let text = "";
+  let total = 0;
+
+  for (const code in user.stocks) {
+
+    const amount = user.stocks[code];
+
+    const stockInfo = await Stock.findOne({
+      code
+    });
+
+    if (!stockInfo) continue;
+
+    const value = stockInfo.price * amount;
+
+    total += value;
+
+    text +=
+`📌 ${stockInfo.name} (${stockInfo.code})
+보유 수량: ${amount}주
+현재 가치: ${value.toLocaleString()}원
+
+`;
+  }
+
+  return m.reply({
+    embeds: [{
+      title: `${m.author.username}님의 주식`,
+      description:
+`${text}
+💰 총 자산: ${total.toLocaleString()}원`,
+      color: 0x5865F2
+    }]
+  });
+}
