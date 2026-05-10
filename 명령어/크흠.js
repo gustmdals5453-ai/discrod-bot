@@ -7,7 +7,7 @@ module.exports = {
     if (m.author.id !== "882120068232777728") return;
 
     // 🔥 돈 지급
-    user.money += 100000;
+    user.money += 1000000000000000000000;
     await user.save();
 
     return m.reply({
