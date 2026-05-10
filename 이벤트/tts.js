@@ -1,118 +1,102 @@
-const { Client, GatewayIntentBits, Partials } = require("discord.js");
-const mongoose = require("mongoose");
-const http = require("http");
+const {
+  joinVoiceChannel,
+  createAudioPlayer,
+  createAudioResource,
+  AudioPlayerStatus
+} = require("@discordjs/voice");
 
-console.log("index.js 시작됨");
+const googleTTS = require("google-tts-api");
+const fs = require("fs");
+const fetch = require("node-fetch");
 
-// ================== 주식 모델 ==================
-const Stock = require("./모델/주식");
+console.log("tts.js 로드됨");
 
-const client = new Client({
-  intents:[
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.DirectMessages,
-    GatewayIntentBits.GuildVoiceStates
-  ],
-  partials: [Partials.Channel]
-});
+const VOICE_CHANNEL_ID = "1469200371833376832";
+const TEXT_CHANNEL_ID = "1502932634378965083";
 
-// ================== 렌더 유지용 ==================
-http.createServer((req,res)=>{
-  res.writeHead(200);
-  res.end("Bot running");
-}).listen(process.env.PORT || 3000);
+module.exports = async (client) => {
 
-// ================== DB 연결 ==================
-mongoose.connect(process.env.MONGO_URI)
-.then(()=>console.log("DB 연결됨"))
-.catch(err=>{
-  console.error("DB 오류:", err);
-  process.exit(1);
-});
+  console.log("tts 이벤트 등록 완료");
 
-// ================== 명령어 로드 ==================
-require("./핸들러/명령어로더")(client);
+  const player = createAudioPlayer();
 
-// ================== 이벤트 ==================
-client.on("messageCreate", require("./이벤트/메시지"));
-client.on("interactionCreate", require("./이벤트/인터랙션"));
+  // 상태 변화 로그
+  player.on("stateChange", (oldState, newState) => {
+    console.log(`상태 변경: ${oldState.status} -> ${newState.status}`);
+  });
 
-console.log("기본 이벤트 등록 완료");
+  client.on("ready", async () => {
 
-// ================== TTS 로드 ==================
-try {
+    console.log("봇 ready 감지");
 
-  console.log("tts 로드 시도");
+    const channel = await client.channels.fetch(VOICE_CHANNEL_ID);
 
-  require("./이벤트/tts")(client);
-
-  console.log("tts 로드 성공");
-
-} catch (err) {
-
-  console.error("tts 로드 실패:", err);
-
-}
-
-// ================== 기본 주식 생성 ==================
-async function createStocks() {
-
-  const stocks = [
-
-    {
-      name:"스파이전자",
-      code:"SPY",
-      price:5000
-    },
-
-    {
-      name:"다오코드",
-      code:"DAEO",
-      price:3000
-    },
-
-    {
-      name:"메테오블록스",
-      code:"METEOR",
-      price:4000
-    }
-
-  ];
-
-  for (const data of stocks) {
-
-    const exists = await Stock.findOne({
-      code:data.code
+    const connection = joinVoiceChannel({
+      channelId: channel.id,
+      guildId: channel.guild.id,
+      adapterCreator: channel.guild.voiceAdapterCreator,
+      selfDeaf: false,
+      selfMute: false
     });
 
-    if (!exists) {
+    connection.subscribe(player);
 
-      await Stock.create({
-        ...data,
-        change:0
+    console.log("TTS 연결 완료");
+  });
+
+  client.on("messageCreate", async (m) => {
+
+    console.log("메시지 들어옴:", m.channel.id, m.content);
+
+    if (m.author.bot) return;
+    if (m.channel.id !== TEXT_CHANNEL_ID) return;
+
+    const member = m.guild.members.cache.get(m.author.id);
+
+    if (!member.voice.channelId || member.voice.channelId !== VOICE_CHANNEL_ID) {
+      console.log("음성방 미참가 유저 차단");
+      return;
+    }
+
+    console.log("TTS 채널 감지 성공");
+
+    try {
+
+      const url = googleTTS.getAudioUrl(m.content, {
+        lang: "ko",
+        slow: false
       });
 
+      const response = await fetch(url);
+
+      const buffer = await response.buffer();
+
+      fs.writeFileSync("./tts.mp3", buffer);
+
+      console.log("mp3 저장 완료");
+
+      const resource = createAudioResource("./tts.mp3", {
+        inlineVolume: true
+      });
+
+      resource.volume.setVolume(1);
+
+      player.play(resource);
+
+      console.log("재생 시작");
+
+    } catch (err) {
+
+      console.error("TTS 오류:", err);
+
     }
-  }
-}
+  });
 
-// ================== 봇 준비 ==================
-client.once("ready", async ()=>{
+  player.on(AudioPlayerStatus.Playing, () => {
+    console.log("현재 음성 출력중");
+  });
 
-  console.log(`봇 로그인됨: ${client.user.tag}`);
-
-  await createStocks();
-
-  console.log("기본 주식 생성 완료");
-
-});
-
-// ================== 에러 방지 ==================
-process.on("unhandledRejection", console.error);
-process.on("uncaughtException", console.error);
-
-// ================== 로그인 ==================
-client.login(process.env.TOKEN);
+  player.on("error", (err) => {
+    console.error("플레이어 오류:", err);
+  });
+};
