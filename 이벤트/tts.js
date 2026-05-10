@@ -18,6 +18,11 @@ module.exports = async (client) => {
 
   const player = createAudioPlayer();
 
+  // 상태 변화 로그
+  player.on("stateChange", (oldState, newState) => {
+    console.log(`상태 변경: ${oldState.status} -> ${newState.status}`);
+  });
+
   client.on("ready", async () => {
 
     console.log("봇 ready 감지");
@@ -28,7 +33,8 @@ module.exports = async (client) => {
       channelId: channel.id,
       guildId: channel.guild.id,
       adapterCreator: channel.guild.voiceAdapterCreator,
-      selfDeaf: false
+      selfDeaf: false,
+      selfMute: false
     });
 
     connection.subscribe(player);
@@ -67,7 +73,11 @@ module.exports = async (client) => {
 
       console.log("mp3 저장 완료");
 
-      const resource = createAudioResource("./tts.mp3");
+      const resource = createAudioResource("./tts.mp3", {
+        inlineVolume: true
+      });
+
+      resource.volume.setVolume(1);
 
       player.play(resource);
 
