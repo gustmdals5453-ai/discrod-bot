@@ -2,7 +2,8 @@ const {
   joinVoiceChannel,
   createAudioPlayer,
   createAudioResource,
-  AudioPlayerStatus
+  AudioPlayerStatus,
+  NoSubscriberBehavior
 } = require("@discordjs/voice");
 
 const googleTTS = require("google-tts-api");
@@ -18,7 +19,11 @@ module.exports = async (client) => {
 
   console.log("tts 이벤트 등록 완료");
 
-  const player = createAudioPlayer();
+  const player = createAudioPlayer({
+    behaviors: {
+      noSubscriber: NoSubscriberBehavior.Play
+    }
+  });
 
   // 상태 변화 로그
   player.on("stateChange", (oldState, newState) => {
