@@ -21,7 +21,7 @@ module.exports = {
       return message.reply({
         embeds: [
           new EmbedBuilder()
-            .setTitle("📈 내 주식")
+            .setTitle("📈 내주식")
             .setColor("Red")
             .setDescription(
 `## 보유 주식 없음
@@ -54,9 +54,12 @@ module.exports = {
       total += value;
 
       text +=
-`📌 ${stockInfo.name} (${stockInfo.code})
-📈 보유 수량: ${amount}주
-💰 현재 가치: ${value.toLocaleString()}원
+`## ${stockInfo.name}
+
+\`\`\`diff
++ 보유 수량 : ${amount}주
++ 현재 가치 : ${value.toLocaleString()}원
+\`\`\`
 
 `;
     }
@@ -66,7 +69,7 @@ module.exports = {
       return message.reply({
         embeds: [
           new EmbedBuilder()
-            .setTitle("📈 내 주식")
+            .setTitle("📈 내주식")
             .setColor("Red")
             .setDescription(
 `## 보유 주식 없음
@@ -84,6 +87,7 @@ module.exports = {
       .setColor("Blue")
       .setDescription(
 `${text}
+
 ## 총 자산
 
 \`\`\`diff
