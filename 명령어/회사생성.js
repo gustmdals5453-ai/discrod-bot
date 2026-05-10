@@ -2,6 +2,7 @@ const { EmbedBuilder } = require("discord.js");
 
 const User = require("../모델/유저");
 const Company = require("../모델/회사");
+const Stock = require("../모델/주식");
 
 module.exports = {
   name: "회사생성",
@@ -64,6 +65,15 @@ module.exports = {
       name
     });
 
+    // 회사 주식 생성
+    await Stock.create({
+      name: company.name,
+      code: company.name.slice(0,3).toUpperCase(),
+      price: 10000,
+      change: 0
+    });
+
+    // 유저 회사 등록
     user.company = company.name;
 
     await user.save();
@@ -73,6 +83,9 @@ module.exports = {
       .setColor("Blue")
       .setDescription(
 `회사명: ${company.name}
+
+📈 상장 완료:
+${company.name}
 
 💸 사용 금액:
 10,000,000,000,000원`
