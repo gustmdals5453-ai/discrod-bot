@@ -4,9 +4,9 @@ const User = require("../모델/유저");
 const Company = require("../모델/회사");
 
 module.exports = {
-  이름: "회사생성",
+  name: "회사생성",
 
-  async 실행(message, args) {
+  async execute(message, args) {
 
     const name = args.join(" ");
 
