@@ -16,7 +16,7 @@ module.exports = {
     return m.reply({
       embeds:[
         E("블랙잭").setDescription(
-`##  블랙잭
+`## 블랙잭
 
 \`\`\`diff
 + 배팅 금액: ${f(bet)}원
@@ -28,7 +28,7 @@ module.exports = {
       components:[
         new ActionRowBuilder().addComponents(
           new ButtonBuilder()
-            .setCustomId(`game_블랙잭_${bet}`)
+            .setCustomId(`game_블랙잭_${bet}_${m.author.id}`)
             .setLabel("🃏 시작")
             .setStyle(ButtonStyle.Primary)
         )
