@@ -16,6 +16,8 @@ const TEXT_CHANNEL_ID = "1502932634378965083";
 
 module.exports = async (client) => {
 
+  console.log("tts 이벤트 등록 완료");
+
   const player = createAudioPlayer();
 
   // 상태 변화 로그
