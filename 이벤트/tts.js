@@ -1,3 +1,5 @@
+require("libsodium-wrappers");
+
 const {
   joinVoiceChannel,
   createAudioPlayer,
