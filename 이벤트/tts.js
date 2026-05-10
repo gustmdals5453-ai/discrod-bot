@@ -4,24 +4,19 @@ const {
   joinVoiceChannel,
   createAudioPlayer,
   createAudioResource,
-  StreamType,
   AudioPlayerStatus,
-  NoSubscriberBehavior
+  NoSubscriberBehavior,
+  StreamType
 } = require("@discordjs/voice");
 
-const googleTTS = require("google-tts-api");
-const fetch = require("node-fetch");
-const fs = require("fs");
-const prism = require("prism-media");
+const discordTTS = require("discord-tts");
 
-console.log("tts.js 시작됨");
+console.log("discord-tts 로드됨");
 
 const VOICE_CHANNEL_ID = "1469200371833376832";
 const TEXT_CHANNEL_ID = "1502932634378965083";
 
 module.exports = (client) => {
-
-  console.log("tts 함수 실행됨");
 
   const player = createAudioPlayer({
     behaviors: {
@@ -31,80 +26,41 @@ module.exports = (client) => {
 
   client.once("ready", async () => {
 
-    console.log("ready 이벤트 실행");
+    console.log("봇 ready");
 
-    try {
+    const channel = await client.channels.fetch(VOICE_CHANNEL_ID);
 
-      const channel = await client.channels.fetch(VOICE_CHANNEL_ID);
+    const connection = joinVoiceChannel({
+      channelId: channel.id,
+      guildId: channel.guild.id,
+      adapterCreator: channel.guild.voiceAdapterCreator,
+      selfDeaf: false,
+      selfMute: false
+    });
 
-      const connection = joinVoiceChannel({
-        channelId: channel.id,
-        guildId: channel.guild.id,
-        adapterCreator: channel.guild.voiceAdapterCreator,
-        selfDeaf: false,
-        selfMute: false
-      });
+    connection.subscribe(player);
 
-      connection.subscribe(player);
-
-      console.log("음성채널 연결 성공");
-
-    } catch (err) {
-
-      console.error("음성 연결 오류:", err);
-
-    }
+    console.log("음성방 연결 완료");
   });
 
   client.on("messageCreate", async (m) => {
 
-    console.log("메시지 감지:", m.content);
+    console.log("메시지:", m.content);
+
+    if (m.author.bot) return;
+    if (m.channel.id !== TEXT_CHANNEL_ID) return;
+
+    const member = m.guild.members.cache.get(m.author.id);
+
+    if (!member.voice.channelId) return;
+    if (member.voice.channelId !== VOICE_CHANNEL_ID) return;
 
     try {
 
-      if (m.author.bot) return;
-      if (m.channel.id !== TEXT_CHANNEL_ID) return;
+      const stream = discordTTS.getVoiceStream(m.content);
 
-      const member = m.guild.members.cache.get(m.author.id);
-
-      if (!member.voice.channelId) {
-        console.log("음성방 없음");
-        return;
-      }
-
-      if (member.voice.channelId !== VOICE_CHANNEL_ID) {
-        console.log("다른 음성방");
-        return;
-      }
-
-      console.log("TTS 시작");
-
-      const url = googleTTS.getAudioUrl(m.content, {
-        lang: "ko",
-        slow: false
-      });
-
-      const response = await fetch(url);
-
-      const buffer = await response.buffer();
-
-      fs.writeFileSync("./tts.mp3", buffer);
-
-      console.log("mp3 저장 완료");
-
-      const transcoder = new prism.FFmpeg({
-        args: [
-          "-analyzeduration", "0",
-          "-loglevel", "0",
-          "-i", "./tts.mp3",
-          "-f", "s16le",
-          "-ar", "48000",
-          "-ac", "2"
-        ]
-      });
-
-      const resource = createAudioResource(transcoder, {
-        inputType: StreamType.Raw,
+      const resource = createAudioResource(stream, {
+        inputType: StreamType.Arbitrary,
         inlineVolume: true
       });
 
@@ -112,7 +68,7 @@ module.exports = (client) => {
 
       player.play(resource);
 
-      console.log("재생 요청 완료");
+      console.log("TTS 재생 시작");
 
     } catch (err) {
 
