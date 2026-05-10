@@ -4,16 +4,15 @@ const {
   joinVoiceChannel,
   createAudioPlayer,
   createAudioResource,
+  StreamType,
   AudioPlayerStatus,
-  NoSubscriberBehavior,
-  demuxProbe
+  NoSubscriberBehavior
 } = require("@discordjs/voice");
 
 const googleTTS = require("google-tts-api");
-const fs = require("fs");
 const fetch = require("node-fetch");
-
-console.log("tts.js 로드됨");
+const fs = require("fs");
+const prism = require("prism-media");
 
 const VOICE_CHANNEL_ID = "1469200371833376832";
 const TEXT_CHANNEL_ID = "1502932634378965083";
@@ -26,19 +25,13 @@ module.exports = async (client) => {
     }
   });
 
-  let connection;
-
-  player.on("stateChange", (oldState, newState) => {
-    console.log(`상태 변경: ${oldState.status} -> ${newState.status}`);
-  });
-
   client.once("clientReady", async () => {
 
     console.log("봇 ready 감지");
 
     const channel = await client.channels.fetch(VOICE_CHANNEL_ID);
 
-    connection = joinVoiceChannel({
+    const connection = joinVoiceChannel({
       channelId: channel.id,
       guildId: channel.guild.id,
       adapterCreator: channel.guild.voiceAdapterCreator,
@@ -53,7 +46,7 @@ module.exports = async (client) => {
 
   client.on("messageCreate", async (m) => {
 
-    console.log("메시지 들어옴:", m.channel.id, m.content);
+    console.log("메시지 들어옴:", m.content);
 
     if (m.author.bot) return;
     if (m.channel.id !== TEXT_CHANNEL_ID) return;
@@ -61,7 +54,7 @@ module.exports = async (client) => {
     const member = m.guild.members.cache.get(m.author.id);
 
     if (!member.voice.channelId || member.voice.channelId !== VOICE_CHANNEL_ID) {
-      console.log("음성방 미참가 유저 차단");
+      console.log("음성방 미참가");
       return;
     }
 
@@ -80,12 +73,19 @@ module.exports = async (client) => {
 
       console.log("mp3 저장 완료");
 
-      const stream = fs.createReadStream("./tts.mp3");
+      const transcoder = new prism.FFmpeg({
+        args: [
+          "-analyzeduration", "0",
+          "-loglevel", "0",
+          "-i", "./tts.mp3",
+          "-f", "s16le",
+          "-ar", "48000",
+          "-ac", "2"
+        ]
+      });
 
-      const probe = await demuxProbe(stream);
-
-      const resource = createAudioResource(probe.stream, {
-        inputType: probe.type,
+      const resource = createAudioResource(transcoder, {
+        inputType: StreamType.Raw,
         inlineVolume: true
       });
 
@@ -97,7 +97,7 @@ module.exports = async (client) => {
 
     } catch (err) {
 
-      console.error("TTS 오류:", err);
+      console.error(err);
 
     }
   });
