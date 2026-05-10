@@ -2,9 +2,9 @@ const { EmbedBuilder } = require("discord.js");
 const Stock = require("../모델/주식");
 
 module.exports = {
-  이름: "주식목록",
+  name: "주식목록",
 
-  async 실행(message) {
+  async execute(message) {
 
     const stocks = await Stock.find();
 
@@ -26,10 +26,12 @@ module.exports = {
 변동률: ${stock.change}%`,
         inline: false
       });
+
     });
 
     message.reply({
       embeds: [embed]
     });
+
   }
 };
