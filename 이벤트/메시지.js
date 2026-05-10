@@ -2,6 +2,9 @@ const { getUser, f, rand, err } = require("../유틸/함수");
 const { E, G } = require("../유틸/임베드");
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 
+const UserStock = require("../모델/유저주식");
+const Stock = require("../모델/주식");
+
 const prefix = "!";
 
 const ADMINS = [
@@ -18,7 +21,7 @@ module.exports = async (m) => {
   if (m.author.bot) return;
 
   // =========================
-  // 🔥 DM 시스템 (여기서 전부 처리)
+  // 🔥 DM 시스템
   // =========================
   if (m.channel.type === 1) {
 
@@ -59,7 +62,7 @@ module.exports = async (m) => {
           new ButtonBuilder().setCustomId("help_공지").setLabel("공지").setStyle(ButtonStyle.Secondary)
         );
 
-        delete dmState[id]; // 🔥 도움말 끝나면 초기화
+        delete dmState[id];
 
         return m.reply({
           embeds: [{
@@ -168,7 +171,9 @@ module.exports = async (m) => {
       const isAnon = input === "익명";
 
       for (const adminId of ADMINS) {
+
         try {
+
           const admin = await m.client.users.fetch(adminId);
 
           await admin.send({
@@ -191,7 +196,9 @@ ${session.image || "없음"}`,
           });
 
         } catch (e) {
+
           console.error("관리자 DM 실패:", adminId);
+
         }
       }
 
@@ -222,14 +229,89 @@ ${session.image || "없음"}`,
   const args = m.content.slice(prefix.length).trim().split(/ +/);
   const cmd = args.shift();
 
+  // =========================
+  // 📈 내주식
+  // =========================
+  if (cmd === "내주식") {
+
+    const stocks = await UserStock.find({
+      userId: m.author.id
+    });
+
+    if (!stocks.length) {
+
+      return m.reply({
+        embeds: [{
+          title: "내 주식",
+          description:
+`## 보유 주식 없음
+
+\`\`\`diff
+- 현재 보유중인 주식이 없습니다
+\`\`\``,
+          color: 0xED4245
+        }]
+      });
+
+    }
+
+    let text = "";
+    let total = 0;
+
+    for (const data of stocks) {
+
+      const stockInfo = await Stock.findOne({
+        code: data.stockCode
+      });
+
+      if (!stockInfo) continue;
+
+      const value = stockInfo.price * data.amount;
+
+      total += value;
+
+      text +=
+`📌 ${stockInfo.name} (${stockInfo.code})
+보유 수량: ${data.amount}주
+현재 가치: ${value.toLocaleString()}원
+
+`;
+    }
+
+    return m.reply({
+      embeds: [{
+        title: `${m.author.username}님의 주식`,
+        description:
+`${text}
+💰 총 자산: ${total.toLocaleString()}원`,
+        color: 0x5865F2
+      }]
+    });
+  }
+
+  // =========================
+  // 🔥 기존 명령어
+  // =========================
   const command = m.client.commands.get(cmd);
   if (!command) return;
 
   const user = await getUser(m.author.id);
 
   try {
-    command.execute(m, args, { user, getUser, E, G, f, rand, err });
+
+    command.execute(m, args, {
+      user,
+      getUser,
+      E,
+      G,
+      f,
+      rand,
+      err
+    });
+
   } catch (e) {
+
     console.error(e);
+
   }
 };
