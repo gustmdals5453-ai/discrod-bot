@@ -2,12 +2,12 @@ const {
   joinVoiceChannel,
   createAudioPlayer,
   createAudioResource,
-  AudioPlayerStatus,
-  StreamType
+  AudioPlayerStatus
 } = require("@discordjs/voice");
 
 const googleTTS = require("google-tts-api");
-const https = require("https");
+const fs = require("fs");
+const fetch = require("node-fetch");
 
 console.log("tts.js 로드됨");
 
@@ -45,7 +45,6 @@ module.exports = async (client) => {
 
     const member = m.guild.members.cache.get(m.author.id);
 
-    // 음성방 안 들어온 사람 차단
     if (!member.voice.channelId || member.voice.channelId !== VOICE_CHANNEL_ID) {
       console.log("음성방 미참가 유저 차단");
       return;
@@ -60,23 +59,24 @@ module.exports = async (client) => {
         slow: false
       });
 
-      https.get(url, (res) => {
+      const response = await fetch(url);
 
-        const resource = createAudioResource(res, {
-          inputType: StreamType.Arbitrary,
-          inlineVolume: true
-        });
+      const buffer = await response.buffer();
 
-        resource.volume.setVolume(1);
+      fs.writeFileSync("./tts.mp3", buffer);
 
-        player.play(resource);
+      console.log("mp3 저장 완료");
 
-        console.log("재생 시작");
+      const resource = createAudioResource("./tts.mp3");
 
-      });
+      player.play(resource);
+
+      console.log("재생 시작");
 
     } catch (err) {
-      console.log("TTS 오류:", err);
+
+      console.error("TTS 오류:", err);
+
     }
   });
 
