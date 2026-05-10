@@ -26,14 +26,14 @@ module.exports = {
       });
     }
 
-    // 회사 이미 있는지 확인
+    // 이미 회사 있음
     if (user.company) {
       return message.reply({
         content: "```diff\n- 이미 회사를 보유하고 있습니다.\n```"
       });
     }
 
-    // 10조 확인
+    // 10조 필요
     const needMoney = 10000000000000;
 
     if (user.money < needMoney) {
@@ -64,7 +64,6 @@ module.exports = {
       name
     });
 
-    // 유저 회사 등록
     user.company = company.name;
 
     await user.save();
@@ -82,5 +81,6 @@ module.exports = {
     message.reply({
       embeds: [embed]
     });
+
   }
 };
