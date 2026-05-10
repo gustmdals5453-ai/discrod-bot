@@ -4,16 +4,13 @@ const {
   createAudioResource
 } = require("@discordjs/voice");
 
-const edgeTTS = require("edge-tts");
+const googleTTS = require("google-tts-api");
+const fs = require("fs");
 const path = require("path");
+const https = require("https");
 
 const VOICE_CHANNEL_ID = "1469200371833376832";
 const TEXT_CHANNEL_ID = "1502932634378965083";
-
-const voices = [
-  "ko-KR-SunHiNeural",
-  "ko-KR-InJoonNeural"
-];
 
 module.exports = async (client) => {
 
@@ -36,20 +33,22 @@ module.exports = async (client) => {
   client.on("messageCreate", async (m) => {
     if (m.author.bot) return;
     if (m.channel.id !== TEXT_CHANNEL_ID) return;
-    if (!m.content) return;
 
-    const voice = voices[Math.floor(Math.random() * voices.length)];
-
-    const file = path.join(__dirname, "tts.mp3");
-
-    await edgeTTS.save({
-      text: m.content,
-      voice: voice,
-      file: file
+    const url = googleTTS.getAudioUrl(m.content, {
+      lang: "ko",
+      slow: false
     });
 
-    const resource = createAudioResource(file);
+    const file = path.join(__dirname, "tts.mp3");
+    const stream = fs.createWriteStream(file);
 
-    player.play(resource);
+    https.get(url, (res) => {
+      res.pipe(stream);
+
+      stream.on("finish", () => {
+        const resource = createAudioResource(file);
+        player.play(resource);
+      });
+    });
   });
 };
