@@ -12,8 +12,20 @@ module.exports = {
     const amount = Number(args[1]);
 
     if (!code || !amount) {
+
       return message.reply({
-        content: "```diff\n- 사용법: !주식판매 코드 수량\n```"
+        embeds: [
+          new EmbedBuilder()
+            .setColor("Red")
+            .setTitle("📉 주식 판매")
+            .setDescription(
+`## 사용법
+
+\`\`\`diff
+- !주식판매 코드 수량
+\`\`\``
+            )
+        ]
       });
     }
 
@@ -22,8 +34,20 @@ module.exports = {
     });
 
     if (!stock) {
+
       return message.reply({
-        content: "```diff\n- 존재하지 않는 주식입니다.\n```"
+        embeds: [
+          new EmbedBuilder()
+            .setColor("Red")
+            .setTitle("📉 주식 판매")
+            .setDescription(
+`## 오류
+
+\`\`\`diff
+- 존재하지 않는 주식입니다
+\`\`\``
+            )
+        ]
       });
     }
 
@@ -31,21 +55,26 @@ module.exports = {
       userId: message.author.id
     });
 
-    if (!user) {
-      return message.reply({
-        content: "```diff\n- 유저 데이터가 없습니다.\n```"
-      });
-    }
+    if (
+      !user ||
+      !user.stocks ||
+      !user.stocks[stock.code] ||
+      user.stocks[stock.code] < amount
+    ) {
 
-    if (!user.stocks[stock.code]) {
       return message.reply({
-        content: "```diff\n- 해당 주식을 보유하고 있지 않습니다.\n```"
-      });
-    }
+        embeds: [
+          new EmbedBuilder()
+            .setColor("Red")
+            .setTitle("📉 주식 판매")
+            .setDescription(
+`## 판매 실패
 
-    if (user.stocks[stock.code] < amount) {
-      return message.reply({
-        content: "```diff\n- 보유 수량이 부족합니다.\n```"
+\`\`\`diff
+- 보유 주식이 부족합니다
+\`\`\``
+            )
+        ]
       });
     }
 
@@ -60,12 +89,17 @@ module.exports = {
 
     const embed = new EmbedBuilder()
       .setTitle("📉 주식 판매 완료")
-      .setColor("Red")
+      .setColor("Orange")
       .setDescription(
-`${stock.name} 주식 ${amount}주 판매 완료
+`## 판매 성공
 
-💰 획득 금액:
-${total.toLocaleString()}원`
+\`\`\`diff
++ ${stock.name} ${amount}주 판매 완료
+\`\`\`
+
+## 판매 금액
+
+💰 ${total.toLocaleString()}원`
       );
 
     message.reply({
