@@ -2,6 +2,7 @@ const { EmbedBuilder } = require("discord.js");
 
 const Company = require("../모델/회사");
 const Stock = require("../모델/주식");
+const User = require("../모델/유저");
 
 module.exports = {
   name: "회사생성",
@@ -39,7 +40,45 @@ module.exports = {
       });
     }
 
+    // =========================
+    // 유저 확인
+    // =========================
+    let user = await User.findOne({
+      userId: message.author.id
+    });
+
+    if (!user) {
+
+      user = await User.create({
+        userId: message.author.id
+      });
+    }
+
+    // =========================
+    // 회사 생성 비용
+    // =========================
+    const COMPANY_COST = 10000000000000;
+
+    if (user.money < COMPANY_COST) {
+
+      return message.reply({
+        embeds: [
+          new EmbedBuilder()
+            .setTitle("🏢 회사 생성")
+            .setColor("Red")
+            .setDescription(
+`## 생성 실패
+
+\`\`\`diff
+- 회사 생성에는 10조원이 필요합니다
+\`\`\``)
+        ]
+      });
+    }
+
+    // =========================
     // 코드 대문자
+    // =========================
     const upperCode = code.toUpperCase();
 
     // =========================
@@ -61,8 +100,7 @@ module.exports = {
 
 \`\`\`diff
 - 이미 존재하는 회사입니다
-\`\`\``
-            )
+\`\`\``)
         ]
       });
     }
@@ -86,11 +124,17 @@ module.exports = {
 
 \`\`\`diff
 - 이미 존재하는 주식 코드입니다
-\`\`\``
-            )
+\`\`\``)
         ]
       });
     }
+
+    // =========================
+    // 돈 차감
+    // =========================
+    user.money -= COMPANY_COST;
+
+    await user.save();
 
     // =========================
     // 회사 생성
@@ -100,7 +144,7 @@ module.exports = {
     });
 
     // =========================
-    // 주식 생성
+    // 주식 자동 생성
     // =========================
     await Stock.create({
       name,
@@ -126,7 +170,11 @@ module.exports = {
 
 🏢 회사명 : ${name}
 📌 주식 코드 : ${upperCode}
-💰 시작 가격 : ${price.toLocaleString()}원`
+💰 시작 가격 : ${price.toLocaleString()}원
+
+## 사용 금액
+
+💸 ${COMPANY_COST.toLocaleString()}원`
       );
 
     message.reply({
