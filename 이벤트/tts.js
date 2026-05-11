@@ -1,87 +1,37 @@
-require("libsodium-wrappers");
+client.on("messageCreate", async (m) => {
 
-const {
-  joinVoiceChannel,
-  createAudioPlayer,
-  createAudioResource,
-  AudioPlayerStatus,
-  NoSubscriberBehavior,
-  StreamType
-} = require("@discordjs/voice");
+  console.log("메시지:", m.content);
 
-const discordTTS = require("discord-tts");
+  if (m.author.bot) return;
 
-console.log("discord-tts 로드됨");
+  // 🔥 명령어는 무시
+  if (m.content.startsWith("!")) return;
 
-const VOICE_CHANNEL_ID = "1469200371833376832";
-const TEXT_CHANNEL_ID = "1502932634378965083";
+  if (m.channel.id !== TEXT_CHANNEL_ID) return;
 
-module.exports = (client) => {
+  const member = m.guild.members.cache.get(m.author.id);
 
-  const player = createAudioPlayer({
-    behaviors: {
-      noSubscriber: NoSubscriberBehavior.Play
-    }
-  });
+  if (!member.voice.channelId) return;
+  if (member.voice.channelId !== VOICE_CHANNEL_ID) return;
 
-  client.once("ready", async () => {
+  try {
 
-    console.log("봇 ready");
+    const stream = discordTTS.getVoiceStream(m.content);
 
-    const channel = await client.channels.fetch(VOICE_CHANNEL_ID);
-
-    const connection = joinVoiceChannel({
-      channelId: channel.id,
-      guildId: channel.guild.id,
-      adapterCreator: channel.guild.voiceAdapterCreator,
-      selfDeaf: false,
-      selfMute: false
+    const resource = createAudioResource(stream, {
+      inputType: StreamType.Arbitrary,
+      inlineVolume: true
     });
 
-    connection.subscribe(player);
+    resource.volume.setVolume(1);
 
-    console.log("음성방 연결 완료");
-  });
+    player.play(resource);
 
-  client.on("messageCreate", async (m) => {
+    console.log("TTS 재생 시작");
 
-    console.log("메시지:", m.content);
+  } catch (err) {
 
-    if (m.author.bot) return;
-    if (m.channel.id !== TEXT_CHANNEL_ID) return;
+    console.error("TTS 오류:", err);
 
-    const member = m.guild.members.cache.get(m.author.id);
-
-    if (!member.voice.channelId) return;
-    if (member.voice.channelId !== VOICE_CHANNEL_ID) return;
-
-    try {
-
-      const stream = discordTTS.getVoiceStream(m.content);
-
-      const resource = createAudioResource(stream, {
-        inputType: StreamType.Arbitrary,
-        inlineVolume: true
-      });
-
-      resource.volume.setVolume(1);
-
-      player.play(resource);
-
-      console.log("TTS 재생 시작");
-
-    } catch (err) {
-
-      console.error("TTS 오류:", err);
-
-    }
-  });
-
-  player.on(AudioPlayerStatus.Playing, () => {
-    console.log("실제 음성 출력중");
-  });
-
-  player.on("error", (err) => {
-    console.error("플레이어 오류:", err);
-  });
-};
+  }
+});
