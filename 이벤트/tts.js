@@ -1,37 +1,83 @@
-client.on("messageCreate", async (m) => {
+require("libsodium-wrappers");
 
-  console.log("메시지:", m.content);
+const {
+  joinVoiceChannel,
+  createAudioPlayer,
+  createAudioResource,
+  AudioPlayerStatus,
+  NoSubscriberBehavior,
+  StreamType
+} = require("@discordjs/voice");
 
-  if (m.author.bot) return;
+const discordTTS = require("discord-tts");
 
-  // 🔥 명령어는 무시
-  if (m.content.startsWith("!")) return;
+const VOICE_CHANNEL_ID = "1469200371833376832";
+const TEXT_CHANNEL_ID = "1502932634378965083";
 
-  if (m.channel.id !== TEXT_CHANNEL_ID) return;
+module.exports = (client) => {
 
-  const member = m.guild.members.cache.get(m.author.id);
+  const player = createAudioPlayer({
+    behaviors: {
+      noSubscriber: NoSubscriberBehavior.Play
+    }
+  });
 
-  if (!member.voice.channelId) return;
-  if (member.voice.channelId !== VOICE_CHANNEL_ID) return;
+  client.on("messageCreate", async (m) => {
 
-  try {
+    if (m.author.bot) return;
 
-    const stream = discordTTS.getVoiceStream(m.content);
+    if (!m.guild) return;
 
-    const resource = createAudioResource(stream, {
-      inputType: StreamType.Arbitrary,
-      inlineVolume: true
+    // 명령어 무시
+    if (m.content.startsWith("!")) return;
+
+    if (m.channel.id !== TEXT_CHANNEL_ID) return;
+
+    const member = m.guild.members.cache.get(m.author.id);
+
+    if (!member?.voice?.channelId) return;
+    if (member.voice.channelId !== VOICE_CHANNEL_ID) return;
+
+    try {
+
+      const stream = discordTTS.getVoiceStream(m.content);
+
+      const resource = createAudioResource(stream, {
+        inputType: StreamType.Arbitrary,
+        inlineVolume: true
+      });
+
+      resource.volume.setVolume(1);
+
+      player.play(resource);
+
+    } catch (err) {
+
+      console.error("TTS 오류:", err);
+
+    }
+  });
+
+  client.once("ready", async () => {
+
+    const channel = await client.channels.fetch(VOICE_CHANNEL_ID);
+
+    const connection = joinVoiceChannel({
+      channelId: channel.id,
+      guildId: channel.guild.id,
+      adapterCreator: channel.guild.voiceAdapterCreator,
+      selfDeaf: false
     });
 
-    resource.volume.setVolume(1);
+    connection.subscribe(player);
 
-    player.play(resource);
+    console.log("TTS 연결 완료");
+  });
 
-    console.log("TTS 재생 시작");
+  player.on(AudioPlayerStatus.Playing, () => {
+    console.log("TTS 재생중");
+  });
 
-  } catch (err) {
+  player.on("error", console.error);
 
-    console.error("TTS 오류:", err);
-
-  }
-});
+};
