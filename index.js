@@ -5,6 +5,9 @@ const http = require("http");
 // ================== 주식 모델 ==================
 const Stock = require("./모델/주식");
 
+// ================== 주식 자동 변동 ==================
+const stockUpdate = require("./이벤트/주식변동");
+
 const client = new Client({
   intents:[
     GatewayIntentBits.Guilds,
@@ -89,6 +92,11 @@ client.once("ready", async ()=>{
   await createStocks();
 
   console.log("기본 주식 생성 완료");
+
+  // ================== 주식 자동 변동 시작 ==================
+  stockUpdate();
+
+  console.log("주식 자동 변동 시작");
 
 });
 
